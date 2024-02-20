@@ -1007,21 +1007,21 @@ type Node struct {
 }
 
 // Fetch the server configuration for this Revolt instance.
-// -> https://developers.revolt.chat/api/#tag/Core/operation/root_root
+// https://developers.revolt.chat/api/#tag/Core/operation/root_root
 func (api *API) QueryNode() (n *Node, err error) {
 	err = api.RequestJSON(&n, RouteQueryNode(), &RequestOptions{Unauthenticated: true})
 	return
 }
 
 // Retrieve your user information.
-// -> https://developers.revolt.chat/api/#tag/User-Information/operation/fetch_self_req
+// https://developers.revolt.chat/api/#tag/User-Information/operation/fetch_self_req
 func (api *API) FetchSelf() (u *User, err error) {
 	err = api.RequestJSON(&u, RouteFetchSelf(), nil)
 	return
 }
 
 // Retrieve a user's information.
-// -> https://developers.revolt.chat/api/#tag/User-Information/operation/fetch_user_req
+// https://developers.revolt.chat/api/#tag/User-Information/operation/fetch_user_req
 func (api *API) FetchUser(user ULID) (u *User, err error) {
 	err = api.RequestJSON(&u, RouteFetchUser(user), nil)
 	return
@@ -1079,7 +1079,7 @@ func (eu EditUser) MarshalJSON() ([]byte, error) {
 }
 
 // Edit currently authenticated user.
-// -> https://developers.revolt.chat/api/#tag/User-Information/operation/edit_user_req
+// https://developers.revolt.chat/api/#tag/User-Information/operation/edit_user_req
 func (api *API) EditUser(user ULID, params EditUser) (u *User, err error) {
 	err = api.RequestJSON(&u, RouteEditUser(user), &RequestOptions{
 		JSON: params,
@@ -1088,7 +1088,7 @@ func (api *API) EditUser(user ULID, params EditUser) (u *User, err error) {
 }
 
 // Retrieve a user's flags.
-// -> https://developers.revolt.chat/api/#tag/User-Information/operation/fetch_user_flags_fetch_user_flags
+// https://developers.revolt.chat/api/#tag/User-Information/operation/fetch_user_flags_fetch_user_flags
 func (api *API) FetchUserFlags(user ULID) (UserFlags, error) {
 	t := struct {
 		Flags UserFlags `json:"flags"`
@@ -1108,14 +1108,14 @@ type ChangeUsername struct {
 }
 
 // Change your username.
-// -> https://developers.revolt.chat/api/#tag/User-Information/operation/change_username_req
+// https://developers.revolt.chat/api/#tag/User-Information/operation/change_username_req
 func (api *API) ChangeUsername(params *ChangeUsername) (u *User, err error) {
 	err = api.RequestJSON(&u, RouteChangeUsername(), &RequestOptions{JSON: params})
 	return
 }
 
 // This returns a default avatar based on the given id.
-// -> https://developers.revolt.chat/api/#tag/User-Information/operation/get_default_avatar_req
+// https://developers.revolt.chat/api/#tag/User-Information/operation/get_default_avatar_req
 func (api *API) FetchDefaultAvatar(user ULID) ([]byte, error) {
 	response, err := api.Request(RouteFetchDefaultAvatar(user), &RequestOptions{ManualAccept: true, Unauthenticated: true})
 	if err != nil {
@@ -1127,14 +1127,14 @@ func (api *API) FetchDefaultAvatar(user ULID) ([]byte, error) {
 
 // Retrieve a user's profile data.
 // Will fail if you do not have permission to access the other user's profile.
-// -> https://developers.revolt.chat/api/#tag/User-Information/operation/fetch_profile_req
+// https://developers.revolt.chat/api/#tag/User-Information/operation/fetch_profile_req
 func (api *API) FetchUserProfile(user ULID) (p *UserProfile, err error) {
 	err = api.RequestJSON(&p, RouteFetchUserProfile(user), nil)
 	return
 }
 
 // This fetches your direct messages, including any DM and group DM conversations.
-// -> https://developers.revolt.chat/api/#tag/Direct-Messaging/operation/fetch_dms_req
+// https://developers.revolt.chat/api/#tag/Direct-Messaging/operation/fetch_dms_req
 func (api *API) FetchDirectMessageChannels() (a []*Channel, err error) {
 	err = api.RequestJSON(&a, RouteFetchDirectMessageChannels(), nil)
 	return
@@ -1142,14 +1142,14 @@ func (api *API) FetchDirectMessageChannels() (a []*Channel, err error) {
 
 // Open a DM with another user.
 // If the target is oneself, a saved messages channel is returned.
-// -> https://developers.revolt.chat/api/#tag/Direct-Messaging/operation/open_dm_req
+// https://developers.revolt.chat/api/#tag/Direct-Messaging/operation/open_dm_req
 func (api *API) OpenDirectMessage(user ULID) (c *Channel, err error) {
 	err = api.RequestJSON(&c, RouteOpenDirectMessage(user), nil)
 	return
 }
 
 // Retrieve a list of mutual friends and servers with another user.
-// -> https://developers.revolt.chat/api/#tag/Relationships/operation/find_mutual_req
+// https://developers.revolt.chat/api/#tag/Relationships/operation/find_mutual_req
 func (api *API) FetchMutualFriendsAndServers(user ULID) (users []ULID, servers []ULID, err error) {
 	t := struct {
 		Users   []ULID `json:"users"`
@@ -1164,35 +1164,35 @@ func (api *API) FetchMutualFriendsAndServers(user ULID) (users []ULID, servers [
 }
 
 // Accept another user's friend request.
-// -> https://developers.revolt.chat/api/#tag/Relationships/operation/add_friend_req
+// https://developers.revolt.chat/api/#tag/Relationships/operation/add_friend_req
 func (api *API) AcceptFriendRequest(user ULID) (u *User, err error) {
 	err = api.RequestJSON(&u, RouteAcceptFriendRequest(user), nil)
 	return
 }
 
 // Denies another user's friend request.
-// -> https://developers.revolt.chat/api/#tag/Relationships/operation/remove_friend_req
+// https://developers.revolt.chat/api/#tag/Relationships/operation/remove_friend_req
 func (api *API) DenyFriendRequest(user ULID) (u *User, err error) {
 	err = api.RequestJSON(&u, RouteDenyFriendRequest(user), nil)
 	return
 }
 
 // Denies another user's friend request or removes an existing friend.
-// -> https://developers.revolt.chat/api/#tag/Relationships/operation/remove_friend_req
+// https://developers.revolt.chat/api/#tag/Relationships/operation/remove_friend_req
 func (api *API) RemoveFriend(user ULID) (u *User, err error) {
 	err = api.RequestJSON(&u, RouteRemoveFriend(user), nil)
 	return
 }
 
 // Block another user by their ID.
-// -> https://developers.revolt.chat/api/#tag/Relationships/operation/block_user_req
+// https://developers.revolt.chat/api/#tag/Relationships/operation/block_user_req
 func (api *API) BlockUser(user ULID) (u *User, err error) {
 	err = api.RequestJSON(&u, RouteBlockUser(user), nil)
 	return
 }
 
 // Unblock another user by their ID.
-// -> https://developers.revolt.chat/api/#tag/Relationships/operation/unblock_user_req
+// https://developers.revolt.chat/api/#tag/Relationships/operation/unblock_user_req
 func (api *API) UnblockUser(user ULID) (u *User, err error) {
 	err = api.RequestJSON(&u, RouteUnblockUser(user), nil)
 	return
@@ -1200,7 +1200,7 @@ func (api *API) UnblockUser(user ULID) (u *User, err error) {
 
 // Send a friend request to another user.
 // username [required] - Username and discriminator combo separated by #
-// -> https://developers.revolt.chat/api/#tag/Relationships/operation/send_friend_request_req
+// https://developers.revolt.chat/api/#tag/Relationships/operation/send_friend_request_req
 func (api *API) SendFriendRequest(username string) (u *User, err error) {
 	err = api.RequestJSON(&u, RouteSendFriendRequest(), &RequestOptions{
 		JSON: struct {
@@ -1212,7 +1212,7 @@ func (api *API) SendFriendRequest(username string) (u *User, err error) {
 
 // Create a new Revolt bot.
 // name [required] - Bot username
-// -> https://developers.revolt.chat/api/#tag/Bots/operation/create_create_bot
+// https://developers.revolt.chat/api/#tag/Bots/operation/create_create_bot
 func (api *API) CreateBot(name string) (b *Bot, err error) {
 	err = api.RequestJSON(&b, RouteCreateBot(), &RequestOptions{
 		JSON: struct {
@@ -1223,7 +1223,7 @@ func (api *API) CreateBot(name string) (b *Bot, err error) {
 }
 
 // Fetch details of a public (or owned) bot by its id.
-// -> https://developers.revolt.chat/api/#tag/Bots/operation/fetch_public_fetch_public_bot
+// https://developers.revolt.chat/api/#tag/Bots/operation/fetch_public_fetch_public_bot
 func (api *API) FetchPublicBot(bot ULID) (b *PublicBot, err error) {
 	err = api.RequestJSON(&b, RouteFetchPublicBot(bot), nil)
 	return
@@ -1237,13 +1237,13 @@ type InviteBot struct {
 }
 
 // Invite a bot to a server or group by its id.
-// -> https://developers.revolt.chat/api/#tag/Bots/operation/invite_invite_bot
+// https://developers.revolt.chat/api/#tag/Bots/operation/invite_invite_bot
 func (api *API) InviteBot(bot ULID, params *InviteBot) error {
 	return api.RequestNone(RouteInviteBot(bot), &RequestOptions{JSON: params})
 }
 
 // Fetch details of a bot you own by its id.
-// -> https://developers.revolt.chat/api/#tag/Bots/operation/fetch_fetch_bot
+// https://developers.revolt.chat/api/#tag/Bots/operation/fetch_fetch_bot
 func (api *API) FetchBot(bot ULID) (b *Bot, u *User, err error) {
 	t := struct {
 		Bot  *Bot  `json:"bot"`
@@ -1258,7 +1258,7 @@ func (api *API) FetchBot(bot ULID) (b *Bot, u *User, err error) {
 }
 
 // Fetch all of the bots that you have control over.
-// -> https://developers.revolt.chat/api/#tag/Bots/operation/fetch_owned_fetch_owned_bots
+// https://developers.revolt.chat/api/#tag/Bots/operation/fetch_owned_fetch_owned_bots
 func (api *API) FetchOwnedBots() (b []*Bot, u []*User, err error) {
 	t := struct {
 		Bots  []*Bot  `json:"bots"`
@@ -1318,21 +1318,21 @@ func (eb EditBot) MarshalJSON() ([]byte, error) {
 }
 
 // Edit bot details by its ID.
-// -> https://developers.revolt.chat/api/#tag/Bots/operation/edit_edit_bot
+// https://developers.revolt.chat/api/#tag/Bots/operation/edit_edit_bot
 func (api *API) EditBot(bot ULID, params EditBot) (b *Bot, err error) {
 	err = api.RequestJSON(&b, RouteEditBot(bot), &RequestOptions{JSON: params})
 	return
 }
 
 // Fetch channel by its ID.
-// -> https://developers.revolt.chat/api/#tag/Channel-Information/operation/channel_fetch_req
+// https://developers.revolt.chat/api/#tag/Channel-Information/operation/channel_fetch_req
 func (api *API) FetchChannel(channel ULID) (c *Channel, err error) {
 	err = api.RequestJSON(&c, RouteFetchChannel(channel), nil)
 	return
 }
 
 // Deletes a server channel, leaves a group or closes a group.
-// -> https://developers.revolt.chat/api/#tag/Channel-Information/operation/channel_delete_req
+// https://developers.revolt.chat/api/#tag/Channel-Information/operation/channel_delete_req
 func (api *API) CloseChannel(channel ULID, leaveSilently *bool) error {
 	v := url.Values{}
 	if leaveSilently != nil {
@@ -1397,7 +1397,7 @@ func (ec EditChannel) MarshalJSON() ([]byte, error) {
 }
 
 // Edit a channel object by its id.
-// -> https://developers.revolt.chat/api/#tag/Channel-Information/operation/channel_edit_req
+// https://developers.revolt.chat/api/#tag/Channel-Information/operation/channel_edit_req
 func (api *API) EditChannel(channel ULID, params *EditChannel) (c *Channel, err error) {
 	err = api.RequestJSON(&c, RouteEditChannel(channel), &RequestOptions{JSON: params})
 	return
@@ -1405,7 +1405,7 @@ func (api *API) EditChannel(channel ULID, params *EditChannel) (c *Channel, err 
 
 // Creates an invite to this channel.
 // Channel must be a `TextChannel`.
-// -> https://developers.revolt.chat/api/#tag/Channel-Invites/operation/invite_create_req
+// https://developers.revolt.chat/api/#tag/Channel-Invites/operation/invite_create_req
 func (api *API) CreateInvite(channel ULID) (i *Invite, err error) {
 	err = api.RequestJSON(&i, RouteCreateInvite(channel), nil)
 	return
@@ -1413,7 +1413,7 @@ func (api *API) CreateInvite(channel ULID) (i *Invite, err error) {
 
 // Sets permissions for the specified role in this channel.
 // Channel must be a `TextChannel` or `VoiceChannel`.
-// -> https://developers.revolt.chat/api/#tag/Channel-Permissions/operation/permissions_set_req
+// https://developers.revolt.chat/api/#tag/Channel-Permissions/operation/permissions_set_req
 func (api *API) SetRoleChannelPermission(channel, role ULID, allow, deny Permissions) (c *Channel, err error) {
 	err = api.RequestJSON(&c, RouteSetRoleChannelPermission(channel, role), &RequestOptions{
 		JSON: struct {
@@ -1448,14 +1448,14 @@ func (p SetDefaultPermission) MarshalJSON() ([]byte, error) {
 
 // Sets permissions for the default role in this channel.
 // Channel must be a `Group`, `TextChannel` or `VoiceChannel`.
-// -> https://developers.revolt.chat/api/#tag/Channel-Permissions/operation/permissions_set_default_req
+// https://developers.revolt.chat/api/#tag/Channel-Permissions/operation/permissions_set_default_req
 func (api *API) SetDefaultChannelPermission(channel ULID, params *SetDefaultPermission) (c *Channel, err error) {
 	err = api.RequestJSON(&c, RouteSetDefaultChannelPermission(channel), &RequestOptions{JSON: params})
 	return
 }
 
 // Lets the server and all other clients know that we've seen this message in this channel.
-// -> https://developers.revolt.chat/api/#tag/Messaging/operation/channel_ack_req
+// https://developers.revolt.chat/api/#tag/Messaging/operation/channel_ack_req
 func (api *API) AcknowledgeMessage(channel, message ULID) error {
 	return api.RequestNone(RouteAcknowledgeMessage(channel, message), nil)
 }
@@ -1509,7 +1509,7 @@ type Messages struct {
 }
 
 // Fetch multiple messages.
-// -> https://developers.revolt.chat/api/#tag/Messaging/operation/message_query_req
+// https://developers.revolt.chat/api/#tag/Messaging/operation/message_query_req
 func (api *API) FetchMessages(channel ULID, params *FetchMessages) (m *Messages, err error) {
 	v := url.Values{}
 	if params != nil {
@@ -1633,7 +1633,7 @@ func (sm *SendMessage) SetInteractions(interactions *MessageInteractions) *SendM
 }
 
 // Sends a message to the given channel.
-// -> https://developers.revolt.chat/api/#tag/Messaging/operation/message_send_message_send
+// https://developers.revolt.chat/api/#tag/Messaging/operation/message_send_message_send
 func (api *API) SendMessage(channel ULID, params *SendMessage) (m *Message, err error) {
 	h := http.Header{}
 	if len(params.IdempotencyKey) != 0 {
@@ -1663,7 +1663,7 @@ type SearchForMessages struct {
 }
 
 // This route searches for messages within the given parameters.
-// -> https://developers.revolt.chat/api/#tag/Messaging/operation/message_search_req
+// https://developers.revolt.chat/api/#tag/Messaging/operation/message_search_req
 func (api *API) SearchForMessages(channel ULID, params *SearchForMessages) (m *Messages, err error) {
 	v := url.Values{}
 	v.Set("query", params.Query)
@@ -1700,14 +1700,14 @@ func (api *API) SearchForMessages(channel ULID, params *SearchForMessages) (m *M
 }
 
 // Retrieves a message by its id.
-// -> https://developers.revolt.chat/api/#tag/Messaging/operation/message_fetch_req
+// https://developers.revolt.chat/api/#tag/Messaging/operation/message_fetch_req
 func (api *API) FetchMessage(channel, message ULID) (m *Message, err error) {
 	err = api.RequestJSON(&m, RouteFetchMessage(channel, message), nil)
 	return
 }
 
 // Delete a message you've sent or one you have permission to delete.
-// -> https://developers.revolt.chat/api/#tag/Messaging/operation/message_delete_req
+// https://developers.revolt.chat/api/#tag/Messaging/operation/message_delete_req
 func (api *API) DeleteMessage(channel, message ULID) error {
 	return api.RequestNone(RouteDeleteMessage(channel, message), nil)
 }
@@ -1748,7 +1748,7 @@ func (em *EditMessage) AddEmbeds(embeds ...SendableEmbed) *EditMessage {
 }
 
 // Edits a message that you've previously sent.
-// -> https://developers.revolt.chat/api/#tag/Messaging/operation/message_edit_req
+// https://developers.revolt.chat/api/#tag/Messaging/operation/message_edit_req
 func (api *API) EditMessage(channel, message ULID, params *EditMessage) (m *Message, err error) {
 	err = api.RequestJSON(&m, RouteEditMessage(channel, message), &RequestOptions{JSON: params})
 	return
@@ -1758,7 +1758,7 @@ func (api *API) EditMessage(channel, message ULID, params *EditMessage) (m *Mess
 // This will always require `ManageMessages` permission regardless of whether you own the message or not.
 // Messages must have been sent within the past 1 week.
 // ids [required] - Message IDs
-// -> https://developers.revolt.chat/api/#tag/Messaging/operation/message_bulk_delete_req
+// https://developers.revolt.chat/api/#tag/Messaging/operation/message_bulk_delete_req
 func (api *API) BulkDeleteMessages(channel ULID, ids []ULID) error {
 	return api.RequestNone(RouteBulkDeleteMessages(channel), &RequestOptions{
 		JSON: struct {
@@ -1768,27 +1768,27 @@ func (api *API) BulkDeleteMessages(channel ULID, ids []ULID) error {
 }
 
 // React to a given message.
-// -> https://developers.revolt.chat/api/#tag/Interactions/operation/message_react_react_message
+// https://developers.revolt.chat/api/#tag/Interactions/operation/message_react_react_message
 func (api *API) AddReactionToMessage(channel, message ULID, emoji Emoji) error {
 	return api.RequestNone(RouteAddReactionToMessage(channel, message, emoji), nil)
 }
 
 // Remove your own, someone else's or all of a given reaction.
 // Requires `ManageMessages` if changing others' reactions.
-// -> https://developers.revolt.chat/api/#tag/Interactions/operation/message_unreact_unreact_message
+// https://developers.revolt.chat/api/#tag/Interactions/operation/message_unreact_unreact_message
 func (api *API) RemoveReactionsFromMessage(channel, message ULID, emoji Emoji) error {
 	return api.RequestNone(RouteRemoveReactionsFromMessage(channel, message, emoji), nil)
 }
 
 // Remove your own, someone else's or all of a given reaction.
 // Requires `ManageMessages` permission.
-// -> https://developers.revolt.chat/api/#tag/Interactions/operation/message_clear_reactions_clear_reactions
+// https://developers.revolt.chat/api/#tag/Interactions/operation/message_clear_reactions_clear_reactions
 func (api *API) RemoveAllReactionsFromMessage(channel, message ULID) error {
 	return api.RequestNone(RouteRemoveAllReactionsFromMessage(channel, message), nil)
 }
 
 // Retrieves all users who are part of this group.
-// -> https://developers.revolt.chat/api/#tag/Groups/operation/members_fetch_req
+// https://developers.revolt.chat/api/#tag/Groups/operation/members_fetch_req
 func (api *API) FetchGroupMembers(channel ULID) (a []*User, err error) {
 	err = api.RequestJSON(&a, RouteFetchGroupMembers(channel), nil)
 	return
@@ -1807,7 +1807,7 @@ type CreateGroup struct {
 }
 
 // Create a new group channel.
-// -> https://developers.revolt.chat/api/#tag/Groups/operation/group_create_req
+// https://developers.revolt.chat/api/#tag/Groups/operation/group_create_req
 func (api *API) CreateGroup(params *CreateGroup) (c *Channel, err error) {
 	err = api.RequestJSON(&c, RouteCreateGroup(), &RequestOptions{
 		JSON: params,
@@ -1816,19 +1816,19 @@ func (api *API) CreateGroup(params *CreateGroup) (c *Channel, err error) {
 }
 
 // Adds another user to the group.
-// -> https://developers.revolt.chat/api/#tag/Groups/operation/group_add_member_req
+// https://developers.revolt.chat/api/#tag/Groups/operation/group_add_member_req
 func (api *API) AddMemberToGroup(channel, member ULID) error {
 	return api.RequestNone(RouteAddMemberToGroup(channel, member), nil)
 }
 
 // Removes a user from the group.
-// -> https://developers.revolt.chat/api/#tag/Groups/operation/group_remove_member_req
+// https://developers.revolt.chat/api/#tag/Groups/operation/group_remove_member_req
 func (api *API) RemoveMemberFromGroup(channel, member ULID) error {
 	return api.RequestNone(RouteRemoveMemberFromGroup(channel, member), nil)
 }
 
 // Asks the voice server for a token to join the call.
-// -> https://developers.revolt.chat/api/#tag/Voice/operation/voice_join_req
+// https://developers.revolt.chat/api/#tag/Voice/operation/voice_join_req
 func (api *API) JoinCall(channel ULID) (string, error) {
 	t := struct {
 		Token string `json:"token"`
@@ -1842,7 +1842,7 @@ func (api *API) JoinCall(channel ULID) (string, error) {
 // Creates a webhook which 3rd party platforms can use to send messages.
 // name [required] - The webhook name.
 // avatar [optional, pass empty] - The webhook avatar. (Pass Autumn file ID)
-// -> https://developers.revolt.chat/api/#tag/Webhooks/operation/webhook_create_req
+// https://developers.revolt.chat/api/#tag/Webhooks/operation/webhook_create_req
 func (api *API) CreateWebhook(channel ULID, name string, avatar string) (w *Webhook, err error) {
 	err = api.RequestJSON(&w, RouteCreateWebhook(channel), &RequestOptions{
 		JSON: struct {
@@ -1901,14 +1901,14 @@ func (api *API) FetchWebhook(webhook ULID, token string) (w *Webhook, err error)
 }
 
 // Fetches all webhooks inside the channel.
-// -> https://developers.revolt.chat/api/#tag/Webhooks/operation/webhook_fetch_all_req
+// https://developers.revolt.chat/api/#tag/Webhooks/operation/webhook_fetch_all_req
 func (api *API) FetchChannelWebhooks(channel ULID) (a []*Webhook, err error) {
 	err = api.RequestJSON(&a, RouteFetchChannelWebhooks(channel), nil)
 	return
 }
 
 // Executes a webhook and sends a message.
-// -> https://github.com/revoltchat/backend/blob/master/crates/delta/src/routes/webhooks/webhook_execute.rs (No OpenAPI docs)
+// https://github.com/revoltchat/backend/blob/master/crates/delta/src/routes/webhooks/webhook_execute.rs (No OpenAPI docs)
 func (api *API) ExecuteWebhook(webhook ULID, token string, params *SendMessage) (m *Message, err error) {
 	err = api.RequestJSON(&m, RouteExecuteWebhook(webhook, token), &RequestOptions{JSON: params})
 	return
@@ -1929,7 +1929,7 @@ type ServerResponse struct {
 }
 
 // Create a new server.
-// -> https://developers.revolt.chat/api/#tag/Server-Information/operation/server_create_req
+// https://developers.revolt.chat/api/#tag/Server-Information/operation/server_create_req
 func (api *API) CreateServer(params *CreateServer) (sr *ServerResponse, err error) {
 	err = api.RequestJSON(&sr, RouteCreateServer(), &RequestOptions{
 		JSON: params,
@@ -1938,14 +1938,14 @@ func (api *API) CreateServer(params *CreateServer) (sr *ServerResponse, err erro
 }
 
 // Fetch a server by its ID.
-// -> https://developers.revolt.chat/api/#tag/Server-Information/operation/server_fetch_req
+// https://developers.revolt.chat/api/#tag/Server-Information/operation/server_fetch_req
 func (api *API) FetchServer(server ULID) (s *Server, err error) {
 	err = api.RequestJSON(&s, RouteFetchServer(server), nil)
 	return
 }
 
 // Deletes a server if owner.
-// -> https://developers.revolt.chat/api/#tag/Server-Information/operation/server_delete_req
+// https://developers.revolt.chat/api/#tag/Server-Information/operation/server_delete_req
 func (api *API) DeleteServer(server ULID) (err error) {
 	err = api.RequestNone(RouteDeleteServer(server), nil)
 	return
@@ -1967,7 +1967,7 @@ func (ls *LeaveServer) UnsetLeaveSilently() *LeaveServer {
 }
 
 // Leaves a server if not owner.
-// -> https://developers.revolt.chat/api/#tag/Server-Information/operation/server_delete_req
+// https://developers.revolt.chat/api/#tag/Server-Information/operation/server_delete_req
 func (api *API) LeaveServer(server ULID, params *LeaveServer) (err error) {
 	if params == nil {
 		params = &LeaveServer{}
@@ -2163,14 +2163,14 @@ func (es EditServer) MarshalJSON() ([]byte, error) {
 }
 
 // Edit a server by its ID.
-// -> https://developers.revolt.chat/api/#tag/Server-Information/operation/server_edit_req
+// https://developers.revolt.chat/api/#tag/Server-Information/operation/server_edit_req
 func (api *API) EditServer(server ULID, params *EditServer) (s *Server, err error) {
 	err = api.RequestJSON(&s, RouteEditServer(server), &RequestOptions{JSON: params})
 	return
 }
 
 // Mark all channels in a server as read.
-// -> https://developers.revolt.chat/api/#tag/Server-Information/operation/server_ack_req
+// https://developers.revolt.chat/api/#tag/Server-Information/operation/server_ack_req
 func (api *API) MarkServerAsRead(server ULID) (err error) {
 	err = api.RequestNone(RouteMarkServerAsRead(server), nil)
 	return
@@ -2190,7 +2190,7 @@ type CreateChannel struct {
 }
 
 // Create a new Text or Voice channel.
-// -> https://developers.revolt.chat/api/#tag/Server-Information/operation/channel_create_req
+// https://developers.revolt.chat/api/#tag/Server-Information/operation/channel_create_req
 func (api *API) CreateChannel(server ULID, params *CreateChannel) (c *Channel, err error) {
 	err = api.RequestJSON(&c, RouteCreateChannel(server), &RequestOptions{JSON: params})
 	return
@@ -2209,7 +2209,7 @@ type FetchMembers struct {
 }
 
 // Fetch all server members.
-// -> https://developers.revolt.chat/api/#tag/Server-Members/operation/member_fetch_all_req
+// https://developers.revolt.chat/api/#tag/Server-Members/operation/member_fetch_all_req
 func (api *API) FetchMembers(server ULID, params *FetchMembers) (fmr *FetchMembersResponse, err error) {
 	v := url.Values{}
 	if params != nil {
@@ -2226,14 +2226,14 @@ func (api *API) FetchMembers(server ULID, params *FetchMembers) (fmr *FetchMembe
 }
 
 // Retrieve a member.
-// -> https://developers.revolt.chat/api/#tag/Server-Members/operation/member_fetch_req
+// https://developers.revolt.chat/api/#tag/Server-Members/operation/member_fetch_req
 func (api *API) FetchMember(server, member ULID) (m *Member, err error) {
 	err = api.RequestJSON(&m, RouteFetchMember(server, member), nil)
 	return
 }
 
 // Removes a member from the server.
-// -> https://developers.revolt.chat/api/#tag/Server-Members/operation/member_remove_req
+// https://developers.revolt.chat/api/#tag/Server-Members/operation/member_remove_req
 func (api *API) KickMember(server, member ULID) error {
 	return api.RequestNone(RouteKickMember(server, member), nil)
 }
@@ -2285,7 +2285,7 @@ func (em EditMember) MarshalJSON() ([]byte, error) {
 }
 
 // Edit a member by their ID.
-// -> https://developers.revolt.chat/api/#tag/Server-Members/operation/member_edit_req
+// https://developers.revolt.chat/api/#tag/Server-Members/operation/member_edit_req
 func (api *API) EditMember(server, member ULID, params *EditMember) (m *Member, err error) {
 	err = api.RequestJSON(&m, RouteEditMember(server, member), &RequestOptions{
 		JSON: params,
@@ -2300,7 +2300,7 @@ type Ban struct {
 }
 
 // Ban a user by their ID.
-// -> https://developers.revolt.chat/api/#tag/Server-Members/operation/ban_create_req
+// https://developers.revolt.chat/api/#tag/Server-Members/operation/ban_create_req
 func (api *API) BanUser(server, user ULID, reason string) (b *Ban, err error) {
 	err = api.RequestJSON(&b, RouteBanUser(server, user), &RequestOptions{
 		JSON: struct {
@@ -2311,7 +2311,7 @@ func (api *API) BanUser(server, user ULID, reason string) (b *Ban, err error) {
 }
 
 // Remove a user's ban.
-// -> https://developers.revolt.chat/api/#tag/Server-Members/operation/ban_remove_req
+// https://developers.revolt.chat/api/#tag/Server-Members/operation/ban_remove_req
 func (api *API) UnbanUser(server, user ULID) error {
 	return api.RequestNone(RouteUnbanUser(server, user), nil)
 }
@@ -2324,14 +2324,14 @@ type BansResponse struct {
 }
 
 // Fetch all bans on a server.
-// -> https://developers.revolt.chat/api/#tag/Server-Members/operation/ban_list_req
+// https://developers.revolt.chat/api/#tag/Server-Members/operation/ban_list_req
 func (api *API) FetchBans(server ULID) (br *BansResponse, err error) {
 	err = api.RequestJSON(&br, RouteFetchBans(server), nil)
 	return
 }
 
 // Fetch all server invites.
-// -> https://developers.revolt.chat/api/#tag/Server-Members/operation/invites_fetch_req
+// https://developers.revolt.chat/api/#tag/Server-Members/operation/invites_fetch_req
 func (api *API) FetchInvites(server ULID) (i []*Invite, err error) {
 	err = api.RequestJSON(&i, RouteFetchInvites(server), nil)
 	return
@@ -2353,14 +2353,14 @@ type RoleResponse struct {
 }
 
 // Creates a new server role.
-// -> https://developers.revolt.chat/api/#tag/Server-Permissions/operation/roles_create_req
+// https://developers.revolt.chat/api/#tag/Server-Permissions/operation/roles_create_req
 func (api *API) CreateRole(server ULID, params *CreateRole) (rr *RoleResponse, err error) {
 	err = api.RequestJSON(&rr, RouteCreateRole(server), &RequestOptions{JSON: params})
 	return
 }
 
 // Delete a server role by its ID.
-// -> https://developers.revolt.chat/api/#tag/Server-Permissions/operation/roles_delete_req
+// https://developers.revolt.chat/api/#tag/Server-Permissions/operation/roles_delete_req
 func (api *API) DeleteRole(server, role ULID) error {
 	return api.RequestNone(RouteDeleteRole(server, role), nil)
 }
@@ -2381,7 +2381,7 @@ type EditRole struct {
 }
 
 // Edit a role by its ID.
-// -> https://developers.revolt.chat/api/#tag/Server-Permissions/operation/roles_edit_req
+// https://developers.revolt.chat/api/#tag/Server-Permissions/operation/roles_edit_req
 func (api *API) EditRole(server, role ULID, params *EditRole) (r *Role, err error) {
 	err = api.RequestJSON(&r, RouteEditRole(server, role), &RequestOptions{JSON: params})
 	return
@@ -2390,7 +2390,7 @@ func (api *API) EditRole(server, role ULID, params *EditRole) (r *Role, err erro
 // Sets permissions for the specified role in the server.
 // allow [required] - Allow bit flags
 // deny [required] - Disallow bit flags
-// -> https://developers.revolt.chat/api/#tag/Server-Permissions/operation/permissions_set_req
+// https://developers.revolt.chat/api/#tag/Server-Permissions/operation/permissions_set_req
 func (api *API) SetRoleServerPermission(server, role ULID, allow, deny Permissions) (s *Server, err error) {
 	err = api.RequestJSON(&s, RouteSetRoleServerPermission(server, role), &RequestOptions{
 		JSON: struct {
@@ -2404,14 +2404,14 @@ func (api *API) SetRoleServerPermission(server, role ULID, allow, deny Permissio
 }
 
 // Sets permissions for the default role in this server.
-// -> https://developers.revolt.chat/api/#tag/Server-Permissions/operation/permissions_set_default_req
+// https://developers.revolt.chat/api/#tag/Server-Permissions/operation/permissions_set_default_req
 func (api *API) SetDefaultServerPermission(server ULID, params *SetDefaultPermission) (s *Server, err error) {
 	err = api.RequestJSON(&s, RouteSetDefaultServerPermission(server), &RequestOptions{JSON: params})
 	return
 }
 
 // Fetch an invite by its ID.
-// -> https://developers.revolt.chat/api/#tag/Invites/operation/invite_fetch_req
+// https://developers.revolt.chat/api/#tag/Invites/operation/invite_fetch_req
 func (api *API) FetchInvite(invite string) (i *InviteResponse, err error) {
 	err = api.RequestJSON(&i, RouteFetchInvite(invite), nil)
 	return
@@ -2425,20 +2425,20 @@ type JoinInviteResponse struct {
 }
 
 // Join an invite by its ID.
-// -> https://developers.revolt.chat/api/#tag/Invites/operation/invite_join_req
+// https://developers.revolt.chat/api/#tag/Invites/operation/invite_join_req
 func (api *API) JoinInvite(invite string) (jir *JoinInviteResponse, err error) {
 	err = api.RequestJSON(&jir, RouteJoinInvite(invite), nil)
 	return
 }
 
 // Delete an invite by its ID.
-// -> https://developers.revolt.chat/api/#tag/Invites/operation/invite_delete_req
+// https://developers.revolt.chat/api/#tag/Invites/operation/invite_delete_req
 func (api *API) DeleteInvite(invite string) error {
 	return api.RequestNone(RouteDeleteInvite(invite), nil)
 }
 
 // Fetch an emoji by its ID.
-// -> https://developers.revolt.chat/api/#tag/Emojis/operation/emoji_fetch_fetch_emoji
+// https://developers.revolt.chat/api/#tag/Emojis/operation/emoji_fetch_fetch_emoji
 func (api *API) FetchEmoji(emoji ULID) (ce *CustomEmoji, err error) {
 	err = api.RequestJSON(&ce, RouteFetchEmoji(emoji), nil)
 	return
@@ -2454,14 +2454,14 @@ type CreateEmoji struct {
 }
 
 // Create an emoji by its Autumn upload ID.
-// -> https://developers.revolt.chat/api/#tag/Emojis/operation/emoji_create_create_emoji
+// https://developers.revolt.chat/api/#tag/Emojis/operation/emoji_create_create_emoji
 func (api *API) CreateEmoji(emoji string, params *CreateEmoji) (ce *CustomEmoji, err error) {
 	err = api.RequestJSON(&ce, RouteCreateEmoji(emoji), nil)
 	return
 }
 
 // Delete an emoji by its ID.
-// -> https://developers.revolt.chat/api/#tag/Emojis/operation/emoji_delete_delete_emoji
+// https://developers.revolt.chat/api/#tag/Emojis/operation/emoji_delete_delete_emoji
 func (api *API) DeleteEmoji(emoji ULID) error {
 	return api.RequestNone(RouteDeleteEmoji(emoji), nil)
 }
@@ -2473,7 +2473,7 @@ func (api *API) FetchServerEmojis(server ULID) (a []*CustomEmoji, err error) {
 }
 
 // Fetch various technical statistics.
-// -> https://developers.revolt.chat/api/#tag/Admin/operation/stats_stats
+// https://developers.revolt.chat/api/#tag/Admin/operation/stats_stats
 func (api *API) QueryStats() (st *InstanceStatistics, err error) {
 	err = api.RequestJSON(&st, RouteQueryStats(), nil)
 	return
@@ -2501,7 +2501,7 @@ type GloballyFetchMessages struct {
 }
 
 // This is a privileged route to globally fetch messages.
-// -> https://developers.revolt.chat/api/#tag/Admin/operation/message_query_message_query
+// https://developers.revolt.chat/api/#tag/Admin/operation/message_query_message_query
 func (api *API) GloballyFetchMessages(params *GloballyFetchMessages) (m *Messages, err error) {
 	var r json.RawMessage
 	err = api.RequestJSON(&r, RouteGloballyFetchMessages(), &RequestOptions{JSON: params})
@@ -2530,14 +2530,14 @@ type EditReport struct {
 }
 
 // Edit a report.
-// -> https://developers.revolt.chat/api/#tag/User-Safety/operation/edit_report_edit_report
+// https://developers.revolt.chat/api/#tag/User-Safety/operation/edit_report_edit_report
 func (api *API) EditReport(report ULID, params *EditReport) (r *Report, err error) {
 	err = api.RequestJSON(&r, RouteEditReport(report), &RequestOptions{JSON: params})
 	return
 }
 
 // Fetch a report by its ID.
-// -> https://developers.revolt.chat/api/#tag/User-Safety/operation/fetch_report_fetch_report
+// https://developers.revolt.chat/api/#tag/User-Safety/operation/fetch_report_fetch_report
 func (api *API) FetchReport(report ULID) (r *Report, err error) {
 	err = api.RequestJSON(&r, RouteFetchReport(report), nil)
 	return
@@ -2553,7 +2553,7 @@ type FetchReports struct {
 }
 
 // Fetch all available reports.
-// -> https://developers.revolt.chat/api/#tag/User-Safety/operation/fetch_reports_fetch_reports
+// https://developers.revolt.chat/api/#tag/User-Safety/operation/fetch_reports_fetch_reports
 func (api *API) FetchReports(params *FetchReports) (a []*Report, err error) {
 	v := url.Values{}
 	if params != nil {
@@ -2574,7 +2574,7 @@ func (api *API) FetchReports(params *FetchReports) (a []*Report, err error) {
 // Report a piece of content to the moderation team.
 // content [required] - The content being reported.
 // additionalContext [optional, pass empty] - Additional report description
-// -> https://developers.revolt.chat/api/#tag/User-Safety/operation/report_content_report_content
+// https://developers.revolt.chat/api/#tag/User-Safety/operation/report_content_report_content
 func (api *API) ReportContent(content *ReportContent, additionalContext string) error {
 	return api.RequestNone(RouteReportContent(), &RequestOptions{JSON: struct {
 		Content           *ReportContent `json:"content"`
@@ -2583,7 +2583,7 @@ func (api *API) ReportContent(content *ReportContent, additionalContext string) 
 }
 
 // Fetch a snapshots for a given report.
-// -> https://developers.revolt.chat/api/#tag/User-Safety/operation/fetch_snapshots_fetch_snapshots
+// https://developers.revolt.chat/api/#tag/User-Safety/operation/fetch_snapshots_fetch_snapshots
 func (api *API) FetchSnapshots(report ULID) (a []*Snapshot, err error) {
 	err = api.RequestJSON(&a, RouteFetchSnapshots(report), nil)
 	return
@@ -2592,7 +2592,7 @@ func (api *API) FetchSnapshots(report ULID) (a []*Snapshot, err error) {
 // Create a new account strike
 // user [required] - ID of reported user
 // reason [required] - Attached reason
-// -> https://developers.revolt.chat/api/#tag/User-Safety/operation/create_strike_create_strike
+// https://developers.revolt.chat/api/#tag/User-Safety/operation/create_strike_create_strike
 func (api *API) CreateStrike(user ULID, reason string) (s *Strike, err error) {
 	err = api.RequestJSON(&s, RouteCreateStrike(), &RequestOptions{JSON: struct {
 		UserID ULID   `json:"user_id"`
@@ -2602,7 +2602,7 @@ func (api *API) CreateStrike(user ULID, reason string) (s *Strike, err error) {
 }
 
 // Fetch strikes for a user by their ID
-// -> https://developers.revolt.chat/api/#tag/User-Safety/operation/fetch_strikes_fetch_strikes
+// https://developers.revolt.chat/api/#tag/User-Safety/operation/fetch_strikes_fetch_strikes
 func (api *API) FetchStrikes(user ULID) (a []*Strike, err error) {
 	err = api.RequestJSON(&a, RouteFetchStrikes(user), nil)
 	return
@@ -2614,13 +2614,13 @@ type EditStrike struct {
 }
 
 // Edit a strike by its ID.
-// -> https://developers.revolt.chat/api/#tag/User-Safety/operation/edit_strike_edit_strike
+// https://developers.revolt.chat/api/#tag/User-Safety/operation/edit_strike_edit_strike
 func (api *API) EditStrike(strike ULID, params *EditStrike) error {
 	return api.RequestNone(RouteEditStrike(strike), &RequestOptions{JSON: params})
 }
 
 // Delete a strike by its ID.
-// -> https://developers.revolt.chat/api/#tag/User-Safety/operation/delete_strike_delete_strike
+// https://developers.revolt.chat/api/#tag/User-Safety/operation/delete_strike_delete_strike
 func (api *API) DeleteStrike(strike ULID) error {
 	return api.RequestNone(RouteDeleteStrike(strike), nil)
 }
@@ -2637,7 +2637,7 @@ type CreateAccount struct {
 }
 
 // Create a new account.
-// -> https://developers.revolt.chat/api/#tag/Account/operation/create_account_create_account
+// https://developers.revolt.chat/api/#tag/Account/operation/create_account_create_account
 func (api *API) CreateAccount(params *CreateAccount) error {
 	return api.RequestNone(RouteCreateAccount(), &RequestOptions{JSON: params, Unauthenticated: true})
 }
@@ -2645,7 +2645,7 @@ func (api *API) CreateAccount(params *CreateAccount) error {
 // Resend account creation verification email.
 // email [required] - Email associated with the account
 // captcha [optional, pass empty] - Captcha verification code
-// -> https://developers.revolt.chat/api/#tag/Account/operation/resend_verification_resend_verification
+// https://developers.revolt.chat/api/#tag/Account/operation/resend_verification_resend_verification
 func (api *API) ResendVerification(email, captcha string) error {
 	return api.RequestNone(RouteResendVerification(), &RequestOptions{JSON: struct {
 		Email   string `json:"email"`
@@ -2654,7 +2654,7 @@ func (api *API) ResendVerification(email, captcha string) error {
 }
 
 // Schedule an account for deletion by confirming the received token.
-// -> https://developers.revolt.chat/api/#tag/Account/operation/confirm_deletion_confirm_deletion
+// https://developers.revolt.chat/api/#tag/Account/operation/confirm_deletion_confirm_deletion
 func (api *API) ConfirmAccountDeletion(token string) error {
 	return api.RequestNone(RouteConfirmAccountDeletion(), &RequestOptions{JSON: struct {
 		Token string `json:"token"`
@@ -2662,20 +2662,20 @@ func (api *API) ConfirmAccountDeletion(token string) error {
 }
 
 // Request to have an account deleted.
-// -> https://developers.revolt.chat/api/#tag/Account/operation/delete_account_delete_account
+// https://developers.revolt.chat/api/#tag/Account/operation/delete_account_delete_account
 func (api *API) DeleteAccount() error {
 	return api.RequestNone(RouteDeleteAccount(), nil)
 }
 
 // Fetch account information from the current session.
-// -> https://developers.revolt.chat/api/#tag/Account/operation/fetch_account_fetch_account
+// https://developers.revolt.chat/api/#tag/Account/operation/fetch_account_fetch_account
 func (api *API) FetchAccount() (a *Account, err error) {
 	err = api.RequestJSON(&a, RouteFetchAccount(), nil)
 	return
 }
 
 // Disable an account.
-// -> https://developers.revolt.chat/api/#tag/Account/operation/disable_account_disable_account
+// https://developers.revolt.chat/api/#tag/Account/operation/disable_account_disable_account
 func (api *API) DisableAccount() error {
 	return api.RequestNone(RouteDisableAccount(), nil)
 }
@@ -2683,7 +2683,7 @@ func (api *API) DisableAccount() error {
 // Change the current account password.
 // password - New password
 // currentPassword - Current password
-// -> https://developers.revolt.chat/api/#tag/Account/operation/change_password_change_password
+// https://developers.revolt.chat/api/#tag/Account/operation/change_password_change_password
 func (api *API) ChangePassword(password, currentPassword string) error {
 	return api.RequestNone(RouteChangePassword(), &RequestOptions{
 		JSON: struct {
@@ -2696,7 +2696,7 @@ func (api *API) ChangePassword(password, currentPassword string) error {
 // Change the associated account email.
 // email - Valid email address
 // currentPassword - Current password
-// -> https://developers.revolt.chat/api/#tag/Account/operation/change_email_change_email
+// https://developers.revolt.chat/api/#tag/Account/operation/change_email_change_email
 func (api *API) ChangeEmail(email, currentPassword string) error {
 	return api.RequestNone(RouteChangeEmail(), &RequestOptions{
 		JSON: struct {
@@ -2708,7 +2708,7 @@ func (api *API) ChangeEmail(email, currentPassword string) error {
 
 // Verify an email address.
 // ticket - May be nil
-// -> https://developers.revolt.chat/api/#tag/Account/operation/verify_email_verify_email
+// https://developers.revolt.chat/api/#tag/Account/operation/verify_email_verify_email
 func (api *API) VerifyEmail(code string) (ticket *MFATicket, err error) {
 	var r *struct {
 		Ticket *MFATicket `json:"ticket"`
@@ -2723,7 +2723,7 @@ func (api *API) VerifyEmail(code string) (ticket *MFATicket, err error) {
 // Send an email to reset account password.
 // email [required] - Email associated with the account
 // captcha [optional, pass empty string] - Captcha verification code
-// -> https://developers.revolt.chat/api/#tag/Account/operation/send_password_reset_send_password_reset
+// https://developers.revolt.chat/api/#tag/Account/operation/send_password_reset_send_password_reset
 func (api *API) SendPasswordReset(email, captcha string) error {
 	return api.RequestNone(RouteSendPasswordReset(), &RequestOptions{JSON: struct {
 		Email   string `json:"email"`
@@ -2734,7 +2734,7 @@ func (api *API) SendPasswordReset(email, captcha string) error {
 // Confirm password reset and change the password.
 // token [required] - Reset token
 // password [required] - New password
-// -> https://developers.revolt.chat/api/#tag/Account/operation/password_reset_password_reset
+// https://developers.revolt.chat/api/#tag/Account/operation/password_reset_password_reset
 func (api *API) PasswordReset(token, password string, removeSessions bool) error {
 	return api.RequestNone(RoutePasswordReset(), &RequestOptions{JSON: struct {
 		Token          string `json:"token"`
@@ -2795,27 +2795,27 @@ type LoginResponse struct {
 }
 
 // Login to an account.
-// -> https://developers.revolt.chat/api/#tag/Session/operation/login_login
+// https://developers.revolt.chat/api/#tag/Session/operation/login_login
 func (api *API) Login(params *Login) (lr *LoginResponse, err error) {
 	err = api.RequestJSON(&lr, RouteLogin(), &RequestOptions{JSON: params, Unauthenticated: true})
 	return
 }
 
 // Delete current session.
-// -> https://developers.revolt.chat/api/#tag/Session/operation/logout_logout
+// https://developers.revolt.chat/api/#tag/Session/operation/logout_logout
 func (api *API) Logout() error {
 	return api.RequestNone(RouteLogout(), nil)
 }
 
 // Fetch all sessions associated with this account.
-// -> https://developers.revolt.chat/api/#tag/Session/operation/fetch_all_fetch_all
+// https://developers.revolt.chat/api/#tag/Session/operation/fetch_all_fetch_all
 func (api *API) FetchSessions() (s []*Session, err error) {
 	err = api.RequestJSON(&s, RouteFetchSessions(), nil)
 	return
 }
 
 // Delete all active sessions, optionally including current one.
-// -> https://developers.revolt.chat/api/#tag/Session/operation/revoke_all_revoke_all
+// https://developers.revolt.chat/api/#tag/Session/operation/revoke_all_revoke_all
 func (api *API) DeleteAllSessions(revokeSelf bool) error {
 	v := url.Values{}
 	if revokeSelf {
@@ -2827,14 +2827,14 @@ func (api *API) DeleteAllSessions(revokeSelf bool) error {
 }
 
 // Delete a specific active session.
-// -> https://developers.revolt.chat/api/#tag/Session/operation/revoke_revoke
+// https://developers.revolt.chat/api/#tag/Session/operation/revoke_revoke
 func (api *API) RevokeSession(session string) error {
 	return api.RequestNone(RouteRevokeSession(session), nil)
 }
 
 // Edit current session information.
 // friendlyName [required] - Session friendly name
-// -> https://developers.revolt.chat/api/#tag/Session/operation/edit_edit
+// https://developers.revolt.chat/api/#tag/Session/operation/edit_edit
 func (api *API) EditSession(session, friendlyName string) (s *Session, err error) {
 	err = api.RequestJSON(&s, RouteEditSession(session), &RequestOptions{
 		JSON: struct {
@@ -2846,7 +2846,7 @@ func (api *API) EditSession(session, friendlyName string) (s *Session, err error
 
 // This will tell you whether the current account requires onboarding or whether you can continue to send requests as usual. You may skip calling this if you're restoring an existing session.
 // Return value - Whether onboarding is required
-// -> https://developers.revolt.chat/api/#tag/Onboarding/operation/hello_req
+// https://developers.revolt.chat/api/#tag/Onboarding/operation/hello_req
 func (api *API) CheckOnboardingStatus() (onboarding bool, err error) {
 	t := struct {
 		Onboarding bool `json:"onboarding"`
@@ -2858,7 +2858,7 @@ func (api *API) CheckOnboardingStatus() (onboarding bool, err error) {
 
 // This sets a new username, completes onboarding and allows a user to start using Revolt.
 // username [required] - New username which will be used to identify the user on the platform
-// -> https://developers.revolt.chat/api/#tag/Onboarding/operation/complete_req
+// https://developers.revolt.chat/api/#tag/Onboarding/operation/complete_req
 func (api *API) CompleteOnboarding(username string) error {
 	return api.RequestNone(RouteCompleteOnboarding(), &RequestOptions{
 		JSON: struct {
@@ -2868,7 +2868,7 @@ func (api *API) CompleteOnboarding(username string) error {
 }
 
 // Create a new MFA ticket or validate an existing one.
-// -> https://developers.revolt.chat/api/#tag/MFA/operation/create_ticket_create_ticket
+// https://developers.revolt.chat/api/#tag/MFA/operation/create_ticket_create_ticket
 func (api *API) CreateMFATicket(params *MFAResponse) (t *MFATicket, err error) {
 	err = api.RequestJSON(&t, RouteCreateMFATicket(), &RequestOptions{JSON: params})
 	return
@@ -2884,41 +2884,41 @@ type MFAStatus struct {
 }
 
 // Fetch MFA status of an account.
-// -> https://developers.revolt.chat/api/#tag/MFA/operation/fetch_status_fetch_status
+// https://developers.revolt.chat/api/#tag/MFA/operation/fetch_status_fetch_status
 func (api *API) FetchMFAStatus() (s *MFAStatus, err error) {
 	err = api.RequestJSON(&s, RouteFetchMFAStatus(), nil)
 	return
 }
 
 // Fetch recovery codes for an account.
-// -> https://developers.revolt.chat/api/#tag/MFA/operation/fetch_recovery_fetch_recovery
+// https://developers.revolt.chat/api/#tag/MFA/operation/fetch_recovery_fetch_recovery
 func (api *API) FetchRecoveryCodes() (a []string, err error) {
 	err = api.RequestJSON(&a, RouteFetchRecoveryCodes(), nil)
 	return
 }
 
 // Re-generate recovery codes for an account.
-// -> https://developers.revolt.chat/api/#tag/MFA/operation/generate_recovery_generate_recovery
+// https://developers.revolt.chat/api/#tag/MFA/operation/generate_recovery_generate_recovery
 func (api *API) GenerateRecoveryCodes() (a []string, err error) {
 	err = api.RequestJSON(&a, RouteGenerateRecoveryCodes(), nil)
 	return
 }
 
 // Fetch available MFA methods.
-// -> https://developers.revolt.chat/api/#tag/MFA/operation/get_mfa_methods_get_mfa_methods
+// https://developers.revolt.chat/api/#tag/MFA/operation/get_mfa_methods_get_mfa_methods
 func (api *API) GetMFAMethods() (a []MFAMethod, err error) {
 	err = api.RequestJSON(&a, RouteGetMFAMethods(), nil)
 	return
 }
 
 // Generate a new secret for TOTP.
-// -> https://developers.revolt.chat/api/#tag/MFA/operation/totp_enable_totp_enable
+// https://developers.revolt.chat/api/#tag/MFA/operation/totp_enable_totp_enable
 func (api *API) EnableTOTP2FA(params *MFAResponse) error {
 	return api.RequestNone(RouteEnableTOTP2FA(), &RequestOptions{JSON: params})
 }
 
 // Generate a new secret for TOTP.
-// -> https://developers.revolt.chat/api/#tag/MFA/operation/totp_generate_secret_totp_generate_secret
+// https://developers.revolt.chat/api/#tag/MFA/operation/totp_generate_secret_totp_generate_secret
 func (api *API) GenerateTOTPSecret() (s string, err error) {
 	t := struct {
 		Secret string `json:"secret"`
@@ -2929,7 +2929,7 @@ func (api *API) GenerateTOTPSecret() (s string, err error) {
 }
 
 // Disable TOTP 2FA for an account.
-// -> https://developers.revolt.chat/api/#tag/MFA/operation/totp_disable_totp_disable
+// https://developers.revolt.chat/api/#tag/MFA/operation/totp_disable_totp_disable
 func (api *API) DisableTOTP2FA() error {
 	return api.RequestNone(RouteDisableTOTP2FA(), nil)
 }
@@ -2937,7 +2937,7 @@ func (api *API) DisableTOTP2FA() error {
 // Fetch settings from server filtered by keys.
 // This will return an object with the requested keys, each value is a `Setting` struct, the value is the previously uploaded data.
 // keys [required] - Keys to fetch
-// -> https://developers.revolt.chat/api/#tag/Sync/operation/get_settings_req
+// https://developers.revolt.chat/api/#tag/Sync/operation/get_settings_req
 func (api *API) FetchSettings(keys []string) (m map[string]*Setting, err error) {
 	err = api.RequestJSON(&m, RouteFetchSettings(), &RequestOptions{JSON: struct {
 		Keys []string `json:"keys"`
@@ -2947,7 +2947,7 @@ func (api *API) FetchSettings(keys []string) (m map[string]*Setting, err error) 
 
 // Upload data to save to settings.
 // timestamp [optional, pass zero] - Timestamp of settings change. Used to avoid feedback loops.
-// -> https://developers.revolt.chat/api/#tag/Sync/operation/set_settings_req
+// https://developers.revolt.chat/api/#tag/Sync/operation/set_settings_req
 func (api *API) SetSettings(timestamp int64, data map[string]string) error {
 	v := url.Values{}
 	if timestamp != 0 {
@@ -2957,7 +2957,7 @@ func (api *API) SetSettings(timestamp int64, data map[string]string) error {
 }
 
 // Fetch information about unread state on channels.
-// -> https://developers.revolt.chat/api/#tag/Sync/operation/get_unreads_req
+// https://developers.revolt.chat/api/#tag/Sync/operation/get_unreads_req
 func (api *API) FetchUnreads() (a []*UnreadMessage, err error) {
 	err = api.RequestJSON(&a, RouteFetchUnreads(), nil)
 	return
@@ -2965,13 +2965,13 @@ func (api *API) FetchUnreads() (a []*UnreadMessage, err error) {
 
 // Create a new Web Push subscription.
 // If an existing subscription exists on this session, it will be removed.
-// -> https://developers.revolt.chat/api/#tag/Web-Push/operation/subscribe_req
+// https://developers.revolt.chat/api/#tag/Web-Push/operation/subscribe_req
 func (api *API) PushSubscribe(params WebPushSubscription) error {
 	return api.RequestNone(RoutePushSubscribe(), &RequestOptions{JSON: params})
 }
 
 // Remove the Web Push subscription associated with the current session.
-// -> https://developers.revolt.chat/api/#tag/Web-Push/operation/unsubscribe_req
+// https://developers.revolt.chat/api/#tag/Web-Push/operation/unsubscribe_req
 func (api *API) Unsubscribe() error {
 	return api.RequestNone(RouteUnsubscribe(), nil)
 }
