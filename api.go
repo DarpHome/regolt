@@ -272,6 +272,10 @@ var (
 	RouteEditMember = func(server ULID, member ULID) Route {
 		return Route{"PATCH", "/servers/" + server.EncodeFP() + "/members/" + member.EncodeFP()}
 	}
+	// API.QueryMembersByName(server, query) -> GET /servers/{server}/members_experimental_query
+	RouteQueryMembersByName = func(server ULID) Route {
+		return Route{"GET", "/servers/" + server.EncodeFP() + "/members_experimental_query"}
+	}
 	// API.BanUser(server, user, reason) -> PUT /servers/{server}/bans/{user}
 	RouteBanUser = func(server ULID, user ULID) Route {
 		return Route{"PUT", "/servers/" + server.EncodeFP() + "/bans/" + user.EncodeFP()}
@@ -1047,8 +1051,8 @@ type EditUser struct {
 	Badges UserBadges
 	// Enum of user flags
 	Flags UserFlags
-	// Enum: "Avatar" "StatusText" "StatusPresence" "ProfileContent" "ProfileBackground" "DisplayName"
 	// Fields to remove from user object
+	// Possible values: ["Avatar", "StatusText", "StatusPresence", "ProfileContent", "ProfileBackground", "DisplayName"]
 	Remove []string
 }
 
@@ -1288,8 +1292,8 @@ type EditBot struct {
 	Analytics *bool
 	// Interactions URL
 	InteractionsURL *string
-	// Enum: "Token" "InteractionsURL"
 	// Fields to remove from bot object
+	// Possible values: ["Token", "InteractionsURL"]
 	Remove []string
 }
 
@@ -1358,7 +1362,8 @@ type EditChannel struct {
 	NSFW *bool
 	// Whether this channel is archived
 	Archived *bool
-	// Enum: "Description" "Icon" "DefaultPermissions"
+	// Fields to remove from channel object
+	// Possible values: ["Description", "Icon", "DefaultPermissions"]
 	Remove []string
 }
 
@@ -2048,8 +2053,8 @@ type EditServer struct {
 	// Whether analytics should be collected for this server
 	// Must be enabled in order to show up on Revolt Discover.
 	Analytics *bool
-	// Enum: "Description" "Categories" "SystemMessages" "Icon" "Banner"
 	// Fields to remove from server object
+	// Possible values: ["Description", "Categories", "SystemMessages", "Icon", "Banner"]
 	Remove []string
 }
 
@@ -2247,8 +2252,8 @@ type EditMember struct {
 	Roles *[]ULID
 	// ISO8601 formatted timestamp
 	Timeout *time.Time
-	// Enum: "Nickname" "Avatar" "Roles" "Timeout"
-	// Fields to remove from channel object
+	// Fields to remove from member object
+	// Possible values: ["Nickname", "Avatar", "Roles", "Timeout"]
 	Remove []string
 }
 
@@ -2290,6 +2295,23 @@ func (api *API) EditMember(server, member ULID, params *EditMember) (m *Member, 
 	err = api.RequestJSON(&m, RouteEditMember(server, member), &RequestOptions{
 		JSON: params,
 	})
+	return
+}
+
+// Query members by a given name, this API is not stable and will be removed in the future.
+// query [required] - String to search for
+// https://developers.revolt.chat/api/#tag/Server-Members/operation/member_experimental_query_member_experimental_query
+func (api *API) QueryMembersByName(server ULID, query string) (ma []*Member, mu []*User, err error) {
+	t := struct {
+		Members []*Member `json:"members"`
+		Users   []*User   `json:"users"`
+	}{}
+	v := url.Values{}
+	v.Set("query", query)
+	v.Set("experimental_api", "true")
+	err = api.RequestJSON(&t, RouteQueryMembersByName(server), &RequestOptions{QueryValues: v})
+	ma = t.Members
+	mu = t.Users
 	return
 }
 
@@ -2375,8 +2397,8 @@ type EditRole struct {
 	// Ranking position
 	// Smaller values take priority.
 	Rank *int `json:"rank,omitempty"`
-	// Enum: "Colour"
 	// Fields to remove from role object
+	// Possible values: ["Colour"]
 	Remove []string `json:"remove,omitempty"`
 }
 
