@@ -411,6 +411,19 @@ func (s RelationshipStatus) ToOptimized() OptimizedRelationshipStatus {
 	return OptimizedRelationshipStatusUnknown
 }
 
+type OptimizedUserProfile struct {
+	Content    string
+	Background *OptimizedAutumnFile
+}
+
+func (o *UserProfile) ToOptimized() *OptimizedUserProfile {
+	var background *OptimizedAutumnFile
+	if o.Background != nil {
+		background = o.Background.ToOptimized()
+	}
+	return &OptimizedUserProfile{Content: o.Content, Background: background}
+}
+
 type OptimizedUser struct {
 	ID            ULID
 	Username      string
@@ -419,7 +432,7 @@ type OptimizedUser struct {
 	Avatar        *OptimizedAutumnFile
 	Relations     []*UserRelation
 	Status        *OptimizedUserStatus
-	Profile       *UserProfile
+	Profile       *OptimizedUserProfile
 	Bot           *UserBot
 	Relationship  OptimizedRelationshipStatus
 	Flags         OptimizedUserFlags
@@ -434,6 +447,10 @@ func (u *User) ToOptimized() *OptimizedUser {
 	if u.Status != nil {
 		status = u.Status.ToOptimized()
 	}
+	var profile *OptimizedUserProfile
+	if u.Profile != nil {
+		profile = u.Profile.ToOptimized()
+	}
 	o := &OptimizedUser{
 		ID:            u.ID,
 		Username:      u.Username,
@@ -441,7 +458,7 @@ func (u *User) ToOptimized() *OptimizedUser {
 		DisplayName:   u.DisplayName,
 		Relations:     u.Relations,
 		Status:        status,
-		Profile:       u.Profile,
+		Profile:       profile,
 		Bot:           u.Bot,
 		Relationship:  u.Relationship.ToOptimized(),
 		Flags:         NewOptimizedUserFlags(u.Flags, u.Badges, u.Privileged, u.Online),

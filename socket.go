@@ -207,7 +207,9 @@ type ServerRoleDelete struct {
 type UserUpdate struct {
 	UserID ULID         `json:"id"`
 	Data   *PartialUser `json:"data"`
-	Clear  []string     `json:"clear"`
+	// Possible values: ["Avatar", "StatusText", "StatusPresence", "ProfileContent", "ProfileBackground", "DisplayName"]
+	Clear   []string `json:"clear"`
+	EventID ULID     `json:"event_id"`
 }
 
 // Your relationship with another user has changed.
@@ -215,6 +217,12 @@ type UserRelationship struct {
 	ID     ULID               `json:"id"`
 	User   *User              `json:"user"`
 	Status RelationshipStatus `json:"status"`
+}
+
+// Settings were updated remotely
+type UserSettingsUpdate struct {
+	ID     ULID                `json:"id"`
+	Update map[string]*Setting `json:"update"`
 }
 
 // User has been platform banned or deleted their account.
@@ -906,11 +914,14 @@ func (socket *Socket) process(s []byte) {
 				if len(r.Data.Owner) != 0 {
 					c.Owner = r.Data.Owner
 				}
+				if slices.Contains(r.Clear, "Description") {
+					c.Description = ""
+				}
 				if slices.Contains(r.Clear, "Icon") {
 					c.Icon = nil
 				}
-				if slices.Contains(r.Clear, "Description") {
-					c.Description = ""
+				if slices.Contains(r.Clear, "DefaultPermissions") {
+					c.DefaultPermissions = nil
 				}
 			})
 		})
@@ -998,14 +1009,20 @@ func (socket *Socket) process(s []byte) {
 						s.Flags &= ^OptimizedServerFlagsNSFW
 					}
 				}
+				if slices.Contains(r.Clear, "Description") {
+					s.Description = ""
+				}
+				if slices.Contains(r.Clear, "Categories") {
+					s.Categories = []*Category{}
+				}
+				if slices.Contains(r.Clear, "SystemMessages") {
+					s.SystemMessages = nil
+				}
 				if slices.Contains(r.Clear, "Icon") {
 					s.Icon = nil
 				}
 				if slices.Contains(r.Clear, "Banner") {
 					s.Banner = nil
-				}
-				if slices.Contains(r.Clear, "Description") {
-					s.Description = ""
 				}
 			})
 		})
@@ -1082,6 +1099,9 @@ func (socket *Socket) process(s []byte) {
 					if r.Data.Rank != nil {
 						o.Rank = *r.Data.Rank
 					}
+					if slices.Contains(r.Clear, "Colour") {
+						o.Colour = ""
+					}
 				})
 			}
 		})
@@ -1119,11 +1139,22 @@ func (socket *Socket) process(s []byte) {
 					u.Username = *r.Data.Username
 				}
 				if r.Data.Status != nil {
+					if u.Status == nil {
+						u.Status = &OptimizedUserStatus{}
+					}
 					if len(r.Data.Status.Presence) != 0 {
 						u.Status.Presence = r.Data.Status.Presence.ToOptimized()
 					}
 					if len(r.Data.Status.Text) != 0 {
 						u.Status.Text = r.Data.Status.Text
+					}
+				}
+				if r.Data.Profile != nil {
+					if u.Profile == nil {
+						u.Profile = &OptimizedUserProfile{}
+					}
+					if r.Data.Profile.Background != nil {
+						u.Profile.Background = r.Data.Profile.Background.ToOptimized()
 					}
 				}
 				if r.Data.Relations != nil {
@@ -1132,17 +1163,24 @@ func (socket *Socket) process(s []byte) {
 				if r.Data.Relationship != nil {
 					u.Relationship = (*r.Data.Relationship).ToOptimized()
 				}
-				if slices.Contains(r.Clear, "ProfileContent") {
-					u.Profile.Content = ""
-				}
-				if slices.Contains(r.Clear, "ProfileBackground") {
-					u.Profile.Background = nil
-				}
-				if slices.Contains(r.Clear, "StatusText") {
-					u.Status.Text = ""
-				}
 				if slices.Contains(r.Clear, "Avatar") {
 					u.Avatar = nil
+				}
+				if slices.Contains(r.Clear, "StatusText") && u.Status != nil {
+					u.Status.Text = ""
+				}
+				if slices.Contains(r.Clear, "StatusPresence") && u.Status != nil {
+					u.Status.Presence = OptimizedPresenceInvisible
+				}
+
+				if slices.Contains(r.Clear, "ProfileContent") && u.Profile != nil {
+					u.Profile.Content = ""
+				}
+				if slices.Contains(r.Clear, "ProfileBackground") && u.Profile != nil {
+					u.Profile.Background = nil
+				}
+				if slices.Contains(r.Clear, "DisplayName") {
+					u.DisplayName = ""
 				}
 			})
 		})
