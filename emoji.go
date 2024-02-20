@@ -16,7 +16,7 @@ func NewUnicodeEmoji(emoji string) Emoji {
 }
 
 func (e Emoji) EncodeFP() string {
-	if e.ID != "" {
+	if len(e.ID) != 0 {
 		return e.ID.EncodeFP()
 	}
 	return url.PathEscape(e.Emoji)

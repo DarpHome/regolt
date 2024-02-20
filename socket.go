@@ -35,6 +35,7 @@ type Ready struct {
 	Users    []*User        `json:"users"`
 	Servers  []*Server      `json:"servers"`
 	Channels []*Channel     `json:"channels"`
+	Members  []*Member      `json:"members"`
 	Emojis   *[]CustomEmoji `json:"emojis"`
 }
 
@@ -89,11 +90,20 @@ type MessageRemoveReaction struct {
 	Emoji     Emoji `json:"emoji_id"`
 }
 
+// Multiple messages were deleted.
+type BulkDeleteMessage struct {
+	// Where messages were deleted.
+	ChannelID ULID `json:"channel_id"`
+	// Affected message IDs.
+	IDs []ULID `json:"ids"`
+}
+
 // Channel details updated.
 type ChannelUpdate struct {
 	ChannelID ULID            `json:"id"`
 	Data      *PartialChannel `json:"data"`
-	Clear     []string        `json:"clear"`
+	// Possible values: ["Description", "Icon", "DefaultPermissions"]
+	Clear []string `json:"clear"`
 }
 
 // Channel has been deleted.
@@ -132,11 +142,24 @@ type ChannelAck struct {
 	MessageID ULID `json:"message_id"`
 }
 
-// Server details updated
+// Server has been created.
+type ServerCreate struct {
+	// Unique ID
+	ID ULID `json:"id"`
+	// Server
+	Server *Server `json:"server"`
+	// Channels within this server
+	Channels []*Channel `json:"channels"`
+	// Emojis within this server
+	Emojis []*CustomEmoji `json:"emojis"`
+}
+
+// Server details updated.
 type ServerUpdate struct {
 	ServerID ULID           `json:"id"`
 	Data     *PartialServer `json:"data"`
-	Clear    []string       `json:"clear"`
+	// Possible values: ["Description", "Categories", "SystemMessages", "Icon", "Banner"]
+	Clear []string `json:"clear"`
 }
 
 // Server has been deleted.
@@ -146,9 +169,10 @@ type ServerDelete struct {
 
 // Server member details updated.
 type ServerMemberUpdate struct {
-	ID    MemberID       `json:"id"`
-	Data  *PartialMember `json:"data"`
-	Clear []string       `json:"clear"`
+	ID   MemberID       `json:"id"`
+	Data *PartialMember `json:"data"`
+	// Possible values: ["Nickname", "Avatar", "Roles", "Timeout"]
+	Clear []string `json:"clear"`
 }
 
 // A user has joined the server.
@@ -165,11 +189,12 @@ type ServerMemberLeave struct {
 
 // Server role has been updated or created.
 type ServerRoleUpdate struct {
-	ServerID  ULID         `json:"id"`
-	RoleID    ULID         `json:"role_id"`
-	Data      *PartialRole `json:"data"`
-	Clear     []string     `json:"clear"`
-	IsCreated bool         `json:"-"`
+	ServerID ULID         `json:"id"`
+	RoleID   ULID         `json:"role_id"`
+	Data     *PartialRole `json:"data"`
+	// Possible values: ["Colour"]
+	Clear     []string `json:"clear"`
+	IsCreated bool     `json:"-"`
 }
 
 // Server role has been deleted.
@@ -209,6 +234,19 @@ type EmojiDelete struct {
 	EmojiID ULID `json:"id"`
 }
 
+// Webhook details updated.
+type WebhookUpdate struct {
+	ID   ULID            `json:"id"`
+	Data *PartialWebhook `json:"data"`
+	// Possible values: ["Avatar"]
+	Remove []string `json:"remove"`
+}
+
+// Webhook has been deleted.
+type WebhookDelete struct {
+	ID ULID `json:"id"`
+}
+
 type AuthEventType string
 
 const (
@@ -238,6 +276,7 @@ type Events struct {
 	MessageReact          *EventController[MessageReact]
 	MessageUnreact        *EventController[MessageUnreact]
 	MessageRemoveReaction *EventController[MessageRemoveReaction]
+	BulkDeleteMessage     *EventController[BulkDeleteMessage]
 	// Channel created, the event object has the same schema as the Channel object in the API with the addition of an event type.
 	ChannelCreate      *EventController[Channel]
 	ChannelUpdate      *EventController[ChannelUpdate]
@@ -247,8 +286,7 @@ type Events struct {
 	ChannelStartTyping *EventController[ChannelStartTyping]
 	ChannelStopTyping  *EventController[ChannelStopTyping]
 	ChannelAck         *EventController[ChannelAck]
-	// Server created, the event object has the same schema as the Server object in the API with the addition of an event type.
-	ServerCreate       *EventController[Server]
+	ServerCreate       *EventController[ServerCreate]
 	ServerUpdate       *EventController[ServerUpdate]
 	ServerDelete       *EventController[ServerDelete]
 	ServerMemberUpdate *EventController[ServerMemberUpdate]
@@ -262,7 +300,13 @@ type Events struct {
 	// Emoji created, the event object has the same schema as the Emoji object in the API with the addition of an event type.
 	EmojiCreate *EventController[CustomEmoji]
 	EmojiDelete *EventController[EmojiDelete]
-	Auth        *EventController[Auth]
+	// Webhook created, the event object has the same schema as the Webhook object in the API with the addition of an event type.
+	WebhookCreate *EventController[Webhook]
+	WebhookUpdate *EventController[WebhookUpdate]
+	WebhookDelete *EventController[WebhookDelete]
+	// Report created, the event object has the same schema as the Report object in the API with the addition of an event type.
+	ReportCreate *EventController[Report]
+	Auth         *EventController[Auth]
 }
 
 func (e *Events) init() {
@@ -278,6 +322,7 @@ func (e *Events) init() {
 	e.MessageReact = NewEventController[MessageReact]()
 	e.MessageUnreact = NewEventController[MessageUnreact]()
 	e.MessageRemoveReaction = NewEventController[MessageRemoveReaction]()
+	e.BulkDeleteMessage = NewEventController[BulkDeleteMessage]()
 	e.ChannelCreate = NewEventController[Channel]()
 	e.ChannelUpdate = NewEventController[ChannelUpdate]()
 	e.ChannelDelete = NewEventController[ChannelDelete]()
@@ -286,7 +331,7 @@ func (e *Events) init() {
 	e.ChannelStartTyping = NewEventController[ChannelStartTyping]()
 	e.ChannelStopTyping = NewEventController[ChannelStopTyping]()
 	e.ChannelAck = NewEventController[ChannelAck]()
-	e.ServerCreate = NewEventController[Server]()
+	e.ServerCreate = NewEventController[ServerCreate]()
 	e.ServerUpdate = NewEventController[ServerUpdate]()
 	e.ServerDelete = NewEventController[ServerDelete]()
 	e.ServerMemberUpdate = NewEventController[ServerMemberUpdate]()
@@ -299,6 +344,10 @@ func (e *Events) init() {
 	e.UserPlatformWipe = NewEventController[UserPlatformWipe]()
 	e.EmojiCreate = NewEventController[CustomEmoji]()
 	e.EmojiDelete = NewEventController[EmojiDelete]()
+	e.WebhookCreate = NewEventController[Webhook]()
+	e.WebhookUpdate = NewEventController[WebhookUpdate]()
+	e.WebhookDelete = NewEventController[WebhookDelete]()
+	e.ReportCreate = NewEventController[Report]()
 	e.Auth = NewEventController[Auth]()
 }
 
@@ -334,6 +383,18 @@ func (socket *Socket) CloseWithCode(closeCode int) error {
 		return err
 	}
 	return socket.Connection.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(closeCode, ""))
+}
+
+// Generate by:
+// typ = 'type Events struct { ... }'
+// print('\n'.join(map(lambda p: "func (socket *Socket) On{0}(f func({1})) *Subscription[{1}] {\n\treturn socket.Events.{0}.Listen(f)\n}\n".replace('{0}', p[0]).replace('{1}', p[1]), re.compile(r'(\w+)\s+\*EventController\[([0-9A-Za-z_\[\]]+)\]', re.IGNORECASE).findall(typ))))
+
+func (socket *Socket) OnError(f func(error)) *Subscription[error] {
+	return socket.Events.Error.Listen(f)
+}
+
+func (socket *Socket) OnRevoltError(f func(string)) *Subscription[string] {
+	return socket.Events.RevoltError.Listen(f)
 }
 
 func (socket *Socket) OnAuthenticated(f func(Authenticated)) *Subscription[Authenticated] {
@@ -376,6 +437,10 @@ func (socket *Socket) OnMessageRemoveReaction(f func(MessageRemoveReaction)) *Su
 	return socket.Events.MessageRemoveReaction.Listen(f)
 }
 
+func (socket *Socket) OnBulkDeleteMessage(f func(BulkDeleteMessage)) *Subscription[BulkDeleteMessage] {
+	return socket.Events.BulkDeleteMessage.Listen(f)
+}
+
 func (socket *Socket) OnChannelCreate(f func(Channel)) *Subscription[Channel] {
 	return socket.Events.ChannelCreate.Listen(f)
 }
@@ -408,7 +473,7 @@ func (socket *Socket) OnChannelAck(f func(ChannelAck)) *Subscription[ChannelAck]
 	return socket.Events.ChannelAck.Listen(f)
 }
 
-func (socket *Socket) OnServerCreate(f func(Server)) *Subscription[Server] {
+func (socket *Socket) OnServerCreate(f func(ServerCreate)) *Subscription[ServerCreate] {
 	return socket.Events.ServerCreate.Listen(f)
 }
 
@@ -458,6 +523,22 @@ func (socket *Socket) OnEmojiCreate(f func(CustomEmoji)) *Subscription[CustomEmo
 
 func (socket *Socket) OnEmojiDelete(f func(EmojiDelete)) *Subscription[EmojiDelete] {
 	return socket.Events.EmojiDelete.Listen(f)
+}
+
+func (socket *Socket) OnWebhookCreate(f func(Webhook)) *Subscription[Webhook] {
+	return socket.Events.WebhookCreate.Listen(f)
+}
+
+func (socket *Socket) OnWebhookUpdate(f func(WebhookUpdate)) *Subscription[WebhookUpdate] {
+	return socket.Events.WebhookUpdate.Listen(f)
+}
+
+func (socket *Socket) OnWebhookDelete(f func(WebhookDelete)) *Subscription[WebhookDelete] {
+	return socket.Events.WebhookDelete.Listen(f)
+}
+
+func (socket *Socket) OnReportCreate(f func(Report)) *Subscription[Report] {
+	return socket.Events.ReportCreate.Listen(f)
 }
 
 func (socket *Socket) OnAuth(f func(Auth)) *Subscription[Auth] {
@@ -523,7 +604,7 @@ func (se SocketError) Error() string {
 	case "AlreadyAuthenticated":
 		t = "this connection is already authenticated"
 	}
-	if t != "" {
+	if len(t) != 0 {
 		return se.ErrorID + ": " + t
 	}
 	return se.ErrorID
@@ -768,6 +849,17 @@ func (socket *Socket) process(s []byte) {
 			return
 		}
 		socket.Events.MessageRemoveReaction.EmitInGoroutines(t)
+	case "BulkDeleteMessage":
+		t := BulkDeleteMessage{}
+		if err := json.Unmarshal(s, &t); err != nil {
+			socket.emitError(err)
+			return
+		}
+		socket.Events.BulkDeleteMessage.EmitAndCall(t, func(r BulkDeleteMessage) {
+			for _, i := range r.IDs {
+				socket.Cache.Messages.Del(r.ChannelID, i)
+			}
+		})
 	case "ChannelCreate":
 		t := Channel{}
 		if err := json.Unmarshal(s, &t); err != nil {
@@ -785,7 +877,7 @@ func (socket *Socket) process(s []byte) {
 		}
 		socket.Events.ChannelUpdate.EmitAndCall(t, func(r ChannelUpdate) {
 			socket.Cache.Channels.PartiallyUpdate(t.ChannelID, func(c *OptimizedChannel) {
-				if r.Data.Name != "" {
+				if len(r.Data.Name) != 0 {
 					c.Name = r.Data.Name
 				}
 				if r.Data.Description != nil {
@@ -811,7 +903,7 @@ func (socket *Socket) process(s []byte) {
 				if r.Data.RolePermissions != nil {
 					c.RolePermissions = *r.Data.RolePermissions
 				}
-				if r.Data.Owner != "" {
+				if len(r.Data.Owner) != 0 {
 					c.Owner = r.Data.Owner
 				}
 				if slices.Contains(r.Clear, "Icon") {
@@ -867,15 +959,18 @@ func (socket *Socket) process(s []byte) {
 		}
 		socket.Events.ChannelAck.EmitInGoroutines(t)
 	case "ServerCreate":
-		t := Server{}
+		t := ServerCreate{}
 		if err := json.Unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
-		socket.Events.ServerCreate.EmitAndCall(t, func(r Server) {
-			socket.Cache.Servers.Set(r.ToOptimized())
-			for i, o := range r.Roles {
+		socket.Events.ServerCreate.EmitAndCall(t, func(r ServerCreate) {
+			socket.Cache.Servers.Set(r.Server.ToOptimized())
+			for i, o := range r.Server.Roles {
 				socket.Cache.Roles.Set(i, o.ToOptimized(i))
+			}
+			for _, c := range r.Channels {
+				socket.Cache.Channels.Set(c.ToOptimized())
 			}
 		})
 	case "ServerUpdate":
@@ -951,31 +1046,31 @@ func (socket *Socket) process(s []byte) {
 			socket.emitError(err)
 			return
 		}
-		if t.Data.Name != nil && t.Data.Permissions != nil && t.Data.Hoist != nil && t.Data.Rank != nil {
+		if len(t.Data.Name) != 0 && t.Data.Permissions != nil && t.Data.Hoist != nil && t.Data.Rank != nil {
 			t.IsCreated = true
 		}
 		socket.Events.ServerRoleUpdate.EmitAndCall(t, func(r ServerRoleUpdate) {
 			if r.IsCreated {
 				u := &Role{
-					Name:        *r.Data.Name,
+					Name:        r.Data.Name,
 					Permissions: *r.Data.Permissions,
 					Hoist:       *r.Data.Hoist,
 					Rank:        *r.Data.Rank,
 				}
-				if r.Data.Colour != nil {
-					u.Colour = *r.Data.Colour
+				if len(r.Data.Colour) != 0 {
+					u.Colour = r.Data.Colour
 				}
 				socket.Cache.Roles.Set(r.ServerID, u.ToOptimized(r.RoleID))
 			} else {
 				socket.Cache.Roles.PartiallyUpdate(r.ServerID, r.RoleID, func(o *OptimizedRole) {
-					if r.Data.Name != nil {
-						o.Name = *r.Data.Name
+					if len(r.Data.Name) != 0 {
+						o.Name = r.Data.Name
 					}
 					if r.Data.Permissions != nil {
 						o.Permissions = *r.Data.Permissions
 					}
-					if r.Data.Colour != nil {
-						o.Colour = *r.Data.Colour
+					if len(r.Data.Colour) != 0 {
+						o.Colour = r.Data.Colour
 					}
 					if r.Data.Hoist != nil {
 						if *r.Data.Hoist {
@@ -1024,10 +1119,10 @@ func (socket *Socket) process(s []byte) {
 					u.Username = *r.Data.Username
 				}
 				if r.Data.Status != nil {
-					if r.Data.Status.Presence != "" {
+					if len(r.Data.Status.Presence) != 0 {
 						u.Status.Presence = r.Data.Status.Presence.ToOptimized()
 					}
-					if r.Data.Status.Text != "" {
+					if len(r.Data.Status.Text) != 0 {
 						u.Status.Text = r.Data.Status.Text
 					}
 				}
@@ -1087,6 +1182,53 @@ func (socket *Socket) process(s []byte) {
 		socket.Events.EmojiDelete.EmitAndCall(t, func(r EmojiDelete) {
 			socket.Cache.Emojis.Del(r.EmojiID)
 		})
+	case "WebhookCreate":
+		t := Webhook{}
+		if err := json.Unmarshal(s, &t); err != nil {
+			socket.emitError(err)
+			return
+		}
+		socket.Events.WebhookCreate.EmitAndCall(t, func(r Webhook) {
+			socket.Cache.Webhooks.Set(r.ToOptimized())
+		})
+	case "WebhookUpdate":
+		t := WebhookUpdate{}
+		if err := json.Unmarshal(s, &t); err != nil {
+			socket.emitError(err)
+			return
+		}
+		socket.Events.WebhookUpdate.EmitAndCall(t, func(r WebhookUpdate) {
+			socket.Cache.Webhooks.PartiallyUpdate(r.ID, func(w *OptimizedWebhook) {
+				if len(r.Data.Name) != 0 {
+					w.Name = r.Data.Name
+				}
+				if r.Data.Avatar != nil {
+					w.Avatar = r.Data.Avatar.ToOptimized()
+				}
+				if r.Data.Permissions != nil {
+					w.Permissions = *r.Data.Permissions
+				}
+				if slices.Contains(r.Remove, "Avatar") {
+					w.Avatar = nil
+				}
+			})
+		})
+	case "WebhookDelete":
+		t := WebhookDelete{}
+		if err := json.Unmarshal(s, &t); err != nil {
+			socket.emitError(err)
+			return
+		}
+		socket.Events.WebhookDelete.EmitAndCall(t, func(r WebhookDelete) {
+			socket.Cache.Webhooks.Del(r.ID)
+		})
+	case "ReportCreate":
+		t := Report{}
+		if err := json.Unmarshal(s, &t); err != nil {
+			socket.emitError(err)
+			return
+		}
+		socket.Events.ReportCreate.EmitInGoroutines(t)
 	case "Auth":
 		t := Auth{}
 		if err := json.Unmarshal(s, &t); err != nil {

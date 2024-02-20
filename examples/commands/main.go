@@ -83,7 +83,7 @@ func main() {
 				Callback: func(ctx *commands.Context) {
 					parameter := ctx.String("parameter")
 					content := ""
-					if parameter != "" {
+					if len(parameter) != 0 {
 						content = fmt.Sprintf(("Running on [Regolt](https://github.com/DarpHome/regolt) %s.\n" +
 							"**You passed _%s_ parameter.**"),
 							regolt.Version, parameter)

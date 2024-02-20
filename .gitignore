@@ -25,3 +25,5 @@ go.work
 secret.*.json
 secret.json
 config.json
+
+/local

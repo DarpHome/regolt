@@ -1249,6 +1249,51 @@ type Webhook struct {
 	Token string `json:"token"`
 }
 
+type OptimizedWebhook struct {
+	// Webhook ID
+	ID ULID `json:"id"`
+	// The name of the webhook
+	Name   string               `json:"name"`
+	Avatar *OptimizedAutumnFile `json:"avatar"`
+	// The channel this webhook belongs to
+	ChannelID ULID `json:"channel_id"`
+	// The permissions for the webhook
+	Permissions Permissions `json:"permissions"`
+	// The private token for the webhook
+	Token string `json:"token"`
+}
+
+func (w *Webhook) ToOptimized() *OptimizedWebhook {
+	var avatar *OptimizedAutumnFile
+	if w.Avatar != nil {
+		avatar = w.Avatar.ToOptimized()
+	}
+	return &OptimizedWebhook{
+		ID:          w.ID,
+		Name:        w.Name,
+		Avatar:      avatar,
+		ChannelID:   w.ChannelID,
+		Permissions: w.Permissions,
+		Token:       w.Token,
+	}
+}
+
+func (o OptimizedWebhook) GetKey() ULID {
+	return o.ID
+}
+
+type PartialWebhook struct {
+	// Webhook ID
+	ID ULID `json:"id"`
+	// The name of the webhook
+	Name   string      `json:"name"`
+	Avatar *AutumnFile `json:"avatar"`
+	// The permissions for the webhook
+	Permissions *Permissions `json:"permissions"`
+	// The private token for the webhook
+	// Token string `json:"token"` // removed by backend
+}
+
 type Category struct {
 	// Unique ID for this category
 	ID ULID `json:"id"`
@@ -1326,12 +1371,12 @@ func (o OptimizedRole) GetKey() ULID {
 
 type PartialRole struct {
 	// Role name
-	Name *string `json:"name"`
+	Name string `json:"name"`
 	// Representation of a single permission override as it appears on models and in the database
 	Permissions *PermissionOverride `json:"permissions"`
 	// Colour used for this role
 	// This can be any valid CSS colour
-	Colour *string `json:"colour"`
+	Colour string `json:"colour"`
 	// Whether this role should be shown separately on the member sidebar
 	Hoist *bool `json:"hoist"`
 	// Default: `0`

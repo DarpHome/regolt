@@ -601,10 +601,10 @@ func (api *AutumnAPI) Request(route Route, options *RequestOptions) (*http.Respo
 	if header == nil {
 		header = http.Header{}
 	}
-	if !options.ManualAccept && header.Get("Accept") == "" {
+	if !options.ManualAccept && len(header.Get("Accept")) == 0 {
 		header.Set("Accept", "application/json")
 	}
-	if header.Get("User-Agent") == "" {
+	if len(header.Get("User-Agent")) == 0 {
 		header.Set("User-Agent", "Regolt (https://github.com/DarpHome/regolt, "+Version+")")
 	}
 	if !options.Unauthenticated && api.Token != nil {
@@ -618,7 +618,7 @@ func (api *AutumnAPI) Request(route Route, options *RequestOptions) (*http.Respo
 	}
 	body := options.Body
 	if options.JSON != nil && body == nil {
-		if header.Get("Content-Type") == "" {
+		if len(header.Get("Content-Type")) == 0 {
 			header.Set("Content-Type", "application/json")
 		}
 		b, err := json.Marshal(options.JSON)
@@ -788,25 +788,25 @@ type APIError struct {
 
 func (ae APIError) Error() string {
 	errs := []string{}
-	if ae.Err != "" {
+	if len(ae.Err) != 0 {
 		errs = append(errs, ae.Err)
 	}
 	if ae.Max > 0 {
 		errs = append(errs, fmt.Sprintf("max: %d", ae.Max))
 	}
-	if ae.Permission != "" {
+	if len(ae.Permission) != 0 {
 		errs = append(errs, fmt.Sprintf("permission: %s", ae.Permission))
 	}
-	if ae.Operation != "" {
+	if len(ae.Operation) != 0 {
 		errs = append(errs, fmt.Sprintf("operation: %s", ae.Operation))
 	}
-	if ae.Collection != "" {
+	if len(ae.Collection) != 0 {
 		errs = append(errs, fmt.Sprintf("collection: %s", ae.Collection))
 	}
-	if ae.Location != "" {
+	if len(ae.Location) != 0 {
 		errs = append(errs, fmt.Sprintf("in: %s", ae.Location))
 	}
-	if ae.With != "" {
+	if len(ae.With) != 0 {
 		errs = append(errs, fmt.Sprintf("with: %s", ae.With))
 	}
 	if len(errs) == 0 {
@@ -875,10 +875,10 @@ func (api *API) Request(route Route, options *RequestOptions) (*http.Response, e
 	if header == nil {
 		header = http.Header{}
 	}
-	if !options.ManualAccept && header.Get("Accept") == "" {
+	if !options.ManualAccept && len(header.Get("Accept")) == 0 {
 		header.Set("Accept", "application/json")
 	}
-	if header.Get("User-Agent") == "" {
+	if len(header.Get("User-Agent")) == 0 {
 		header.Set("User-Agent", "Regolt (https://github.com/DarpHome/regolt, "+Version+")")
 	}
 	if !options.Unauthenticated && api.Token != nil {
@@ -892,7 +892,7 @@ func (api *API) Request(route Route, options *RequestOptions) (*http.Response, e
 	}
 	body := options.Body
 	if options.JSON != nil && body == nil {
-		if header.Get("Content-Type") == "" {
+		if len(header.Get("Content-Type")) == 0 {
 			header.Set("Content-Type", "application/json")
 		}
 		b, err := json.Marshal(options.JSON)
@@ -1299,7 +1299,7 @@ type EditBot struct {
 
 func (eb EditBot) MarshalJSON() ([]byte, error) {
 	r := map[string]any{}
-	if eb.Name != "" {
+	if len(eb.Name) != 0 {
 		r["name"] = eb.Name
 	}
 	if eb.Public != nil {
@@ -1369,7 +1369,7 @@ type EditChannel struct {
 
 func (ec EditChannel) MarshalJSON() ([]byte, error) {
 	r := map[string]any{}
-	if ec.Name != "" {
+	if len(ec.Name) != 0 {
 		r["name"] = ec.Name
 	}
 	if ec.Description != nil {
@@ -1860,12 +1860,12 @@ func (api *API) CreateWebhook(channel ULID, name string, avatar string) (w *Webh
 
 // Deletes a webhook [with a token].
 // webhook [required] - The webhook ID
-// token [optional, pass empty] - The webhook private token.
-func (api *API) DeleteWebhook(webhook ULID, token string) error {
-	if len(token) == 0 {
-		return api.RequestNone(RouteDeleteWebhook(webhook), nil)
+// webhookToken [optional, pass empty] - The webhook private token.
+func (api *API) DeleteWebhook(webhookID ULID, webhookToken string) error {
+	if len(webhookToken) == 0 {
+		return api.RequestNone(RouteDeleteWebhook(webhookID), nil)
 	}
-	return api.RequestNone(RouteDeleteWebhookWithToken(webhook, token), &RequestOptions{Unauthenticated: true})
+	return api.RequestNone(RouteDeleteWebhookWithToken(webhookID, webhookToken), &RequestOptions{Unauthenticated: true})
 }
 
 type EditWebhook struct {
@@ -1882,25 +1882,25 @@ type EditWebhook struct {
 
 // Edits a webhook [with a token].
 // webhook [required] - The webhook ID
-// token [optional, pass empty] - The webhook private token.
+// webhookToken [optional, pass empty] - The webhook private token.
 // params [required] - What to change in webhook.
-func (api *API) EditWebhook(webhook ULID, token string, params *EditWebhook) (w *Webhook, err error) {
-	if len(token) == 0 {
-		err = api.RequestJSON(&w, RouteEditWebhook(webhook), &RequestOptions{JSON: params})
+func (api *API) EditWebhook(webhookID ULID, webhookToken string, params *EditWebhook) (w *Webhook, err error) {
+	if len(webhookToken) == 0 {
+		err = api.RequestJSON(&w, RouteEditWebhook(webhookID), &RequestOptions{JSON: params})
 	} else {
-		err = api.RequestJSON(&w, RouteEditWebhookWithToken(webhook, token), &RequestOptions{JSON: params, Unauthenticated: true})
+		err = api.RequestJSON(&w, RouteEditWebhookWithToken(webhookID, webhookToken), &RequestOptions{JSON: params, Unauthenticated: true})
 	}
 	return
 }
 
-// Fetches a webhook [with a token].
-// webhook [required] - The webhook ID
-// token [optional, pass empty] - The webhook private token.
-func (api *API) FetchWebhook(webhook ULID, token string) (w *Webhook, err error) {
-	if len(token) == 0 {
-		err = api.RequestJSON(&w, RouteFetchWebhook(webhook), nil)
+// Fetches a webhook [with a token]. Requires valid API token if no webhook token passed.
+// webhookID [required] - The webhook ID
+// webhookToken [optional, pass empty] - The webhook private token.
+func (api *API) FetchWebhook(webhookID ULID, webhookToken string) (w *Webhook, err error) {
+	if len(webhookToken) == 0 {
+		err = api.RequestJSON(&w, RouteFetchWebhook(webhookID), nil)
 	} else {
-		err = api.RequestJSON(&w, RouteFetchWebhookWithToken(webhook, token), &RequestOptions{Unauthenticated: true})
+		err = api.RequestJSON(&w, RouteFetchWebhookWithToken(webhookID, webhookToken), &RequestOptions{Unauthenticated: true})
 	}
 	return
 }
@@ -2122,7 +2122,7 @@ func (es *EditServer) SetFlags(flags ServerFlags) *EditServer {
 
 func (es EditServer) MarshalJSON() ([]byte, error) {
 	r := map[string]any{}
-	if es.Name != "" {
+	if len(es.Name) != 0 {
 		r["name"] = es.Name
 	}
 	if es.Description != nil {
@@ -2579,13 +2579,13 @@ type FetchReports struct {
 func (api *API) FetchReports(params *FetchReports) (a []*Report, err error) {
 	v := url.Values{}
 	if params != nil {
-		if params.ContentID != "" {
+		if len(params.ContentID) != 0 {
 			v.Set("content_id", string(params.ContentID))
 		}
-		if params.AuthorID != "" {
+		if len(params.AuthorID) != 0 {
 			v.Set("author_id", string(params.AuthorID))
 		}
-		if params.Status != "" {
+		if len(params.Status) != 0 {
 			v.Set("status", string(params.Status))
 		}
 	}

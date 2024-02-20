@@ -205,6 +205,7 @@ type GenericCache struct {
 	Roles    *Cache2[OptimizedRole]
 	Servers  *Cache1[OptimizedServer]
 	Users    *Cache1[OptimizedUser]
+	Webhooks *Cache1[OptimizedWebhook]
 }
 
 func (gc *GenericCache) init() {
