@@ -332,6 +332,10 @@ var (
 	RouteDeleteEmoji = func(emoji ULID) Route {
 		return Route{"DELETE", "/custom/emoji/" + emoji.EncodeFP()}
 	}
+	// API.FetchServerEmojis(server) -> GET /servers/{server}/emojis
+	RouteFetchServerEmojis = func(server ULID) Route {
+		return Route{"GET", "/servers/" + server.EncodeFP() + "/emojis"}
+	}
 	RouteQueryStats = func() Route {
 		return Route{"GET", "/admin/stats"}
 	}
@@ -574,6 +578,9 @@ func NewAutumnAPI(token *Token, config *AutumnAPIConfig) (api *AutumnAPI, err er
 }
 
 var (
+	AutumnRouteFetchConfig = func() Route {
+		return Route{"GET", "/"}
+	}
 	AutumnRouteUpload = func(tag string) Route {
 		return Route{"POST", "/" + url.PathEscape(tag)}
 	}
@@ -635,6 +642,21 @@ func (api *AutumnAPI) Request(route Route, options *RequestOptions) (*http.Respo
 	return response, nil
 }
 
+func (api *AutumnAPI) RequestJSON(v any, route Route, options *RequestOptions) error {
+	response, err := api.Request(route, options)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	if v != nil {
+		err = json.NewDecoder(response.Body).Decode(v)
+		if err != nil && !errors.Is(err, io.EOF) {
+			return err
+		}
+	}
+	return nil
+}
+
 type UploadTag string
 
 const (
@@ -646,8 +668,27 @@ const (
 	UploadTagEmojis      UploadTag = "emojis"
 )
 
+type AutumnTag struct {
+	MaxSize             int      `json:"max_size"`
+	UseULID             bool     `json:"use_ulid"`
+	Enabled             bool     `json:"enabled"`
+	ServeIfFieldPresent []string `json:"serve_if_field_present,omitempty"`
+	RestrictContentType string   `json:"restrict_content_type"`
+}
+
+type AutumnConfig struct {
+	Version     string                `json:"autumn"`
+	Tags        map[string]*AutumnTag `json:"tags"`
+	JPEGQuality int                   `json:"jpeg_quality"`
+}
+
+func (api *AutumnAPI) FetchConfig() (c *AutumnConfig, err error) {
+	err = api.RequestJSON(&c, AutumnRouteFetchConfig(), nil)
+	return
+}
+
 // Upload file to Autumn.
-// tag [required] - tag, valid tags are: ["attachments", "avatars", "backgrounds", "icons", "banners", "emojis"]
+// tag [required] - tag, valid tags are: ["attachments", "avatars", "backgrounds", "banners", "emojis", "icons"]
 // filename [required] - filename that will displayed in client
 // contentType [optional, pass empty] - content type
 // contents [required] - the file contents
@@ -666,20 +707,14 @@ func (api *AutumnAPI) Upload(tag UploadTag, filename, contentType string, conten
 	h := http.Header{}
 	h.Set("Content-Type", mpw.FormDataContentType())
 	mpw.Close()
-	response, err := api.Request(AutumnRouteUpload(string(tag)), &RequestOptions{
+	t := struct {
+		ID string `json:"id"`
+	}{}
+	err = api.RequestJSON(&t, AutumnRouteUpload(string(tag)), &RequestOptions{
 		Body:   io.NopCloser(buf),
 		Header: h,
 	})
-	if err == nil {
-		defer response.Body.Close()
-		t := struct {
-			ID string `json:"id"`
-		}{}
-		if err = json.NewDecoder(response.Body).Decode(&t); err != nil && !errors.Is(err, io.EOF) {
-			return
-		}
-		s, err = t.ID, nil
-	}
+	s = t.ID
 	return
 }
 
@@ -2429,6 +2464,12 @@ func (api *API) CreateEmoji(emoji string, params *CreateEmoji) (ce *CustomEmoji,
 // -> https://developers.revolt.chat/api/#tag/Emojis/operation/emoji_delete_delete_emoji
 func (api *API) DeleteEmoji(emoji ULID) error {
 	return api.RequestNone(RouteDeleteEmoji(emoji), nil)
+}
+
+// Fetch all emojis on a server.
+func (api *API) FetchServerEmojis(server ULID) (a []*CustomEmoji, err error) {
+	err = api.RequestJSON(&a, RouteFetchServerEmojis(server), nil)
+	return
 }
 
 // Fetch various technical statistics.
