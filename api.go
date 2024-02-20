@@ -196,13 +196,37 @@ var (
 	RouteCreateWebhook = func(channel ULID) Route {
 		return Route{"POST", "/channels/" + channel.EncodeFP() + "/webhooks"}
 	}
-	// API.FetchChannelWebhooks(channel) -> GET /channels/{channel}/webhooks
-	RouteFetchChannelWebhooks = func(channel ULID) Route {
-		return Route{"GET", "/channels/" + channel.EncodeFP() + "/webhooks"}
+	// API.DeleteWebhook(webhook, "") -> DELETE /webhooks/{webhook}
+	RouteDeleteWebhook = func(webhook ULID) Route {
+		return Route{"DELETE", "/webhooks/" + webhook.EncodeFP()}
+	}
+	// API.DeleteWebhook(webhook, token) -> DELETE /webhooks/{webhook}/{token}
+	RouteDeleteWebhookWithToken = func(webhook ULID, token string) Route {
+		return Route{"DELETE", "/webhooks/" + webhook.EncodeFP() + "/" + url.PathEscape(token)}
+	}
+	// API.EditWebhook(webhook, "", params) -> PATCH /webhooks/{webhook}
+	RouteEditWebhook = func(webhook ULID) Route {
+		return Route{"PATCH", "/webhooks/" + webhook.EncodeFP()}
+	}
+	// API.EditWebhook(webhook, token, params) -> PATCH /webhooks/{webhook}/{token}
+	RouteEditWebhookWithToken = func(webhook ULID, token string) Route {
+		return Route{"PATCH", "/webhooks/" + webhook.EncodeFP() + "/" + url.PathEscape(token)}
 	}
 	// API.ExecuteWebhook(webhook, token, params) -> POST /webhooks/{webhook}/{token}
 	RouteExecuteWebhook = func(webhook ULID, token string) Route {
 		return Route{"POST", "/webhooks/" + webhook.EncodeFP() + "/" + url.PathEscape(token)}
+	}
+	// API.FetchWebhook(webhook, "") -> GET /webhooks/{webhook}
+	RouteFetchWebhook = func(webhook ULID) Route {
+		return Route{"GET", "/webhooks/" + webhook.EncodeFP()}
+	}
+	// API.FetchWebhook(webhook, token) -> GET /webhooks/{webhook}/{token}
+	RouteFetchWebhookWithToken = func(webhook ULID, token string) Route {
+		return Route{"GET", "/webhooks/" + webhook.EncodeFP() + "/" + url.PathEscape(token)}
+	}
+	// API.FetchChannelWebhooks(channel) -> GET /channels/{channel}/webhooks
+	RouteFetchChannelWebhooks = func(channel ULID) Route {
+		return Route{"GET", "/channels/" + channel.EncodeFP() + "/webhooks"}
 	}
 	// API.CreateServer(params) -> POST /servers/create
 	RouteCreateServer = func() Route {
@@ -1794,6 +1818,53 @@ func (api *API) CreateWebhook(channel ULID, name string, avatar string) (w *Webh
 	return
 }
 
+// Deletes a webhook [with a token].
+// webhook [required] - The webhook ID
+// token [optional, pass empty] - The webhook private token.
+func (api *API) DeleteWebhook(webhook ULID, token string) error {
+	if len(token) == 0 {
+		return api.RequestNone(RouteDeleteWebhook(webhook), nil)
+	}
+	return api.RequestNone(RouteDeleteWebhookWithToken(webhook, token), &RequestOptions{Unauthenticated: true})
+}
+
+type EditWebhook struct {
+	// New webhook name
+	Name string `json:"name,omitempty"`
+	// New avatar ID
+	Avatar string `json:"avatar,omitempty"`
+	// New webhook permissions
+	Permissions *Permissions `json:"permissions,omitempty"`
+	// Fields to remove from webhook
+	// Possible values: ["Avatar"]
+	Remove []string `json:"remove,omitempty"`
+}
+
+// Edits a webhook [with a token].
+// webhook [required] - The webhook ID
+// token [optional, pass empty] - The webhook private token.
+// params [required] - What to change in webhook.
+func (api *API) EditWebhook(webhook ULID, token string, params *EditWebhook) (w *Webhook, err error) {
+	if len(token) == 0 {
+		err = api.RequestJSON(&w, RouteEditWebhook(webhook), &RequestOptions{JSON: params})
+	} else {
+		err = api.RequestJSON(&w, RouteEditWebhookWithToken(webhook, token), &RequestOptions{JSON: params, Unauthenticated: true})
+	}
+	return
+}
+
+// Fetches a webhook [with a token].
+// webhook [required] - The webhook ID
+// token [optional, pass empty] - The webhook private token.
+func (api *API) FetchWebhook(webhook ULID, token string) (w *Webhook, err error) {
+	if len(token) == 0 {
+		err = api.RequestJSON(&w, RouteFetchWebhook(webhook), nil)
+	} else {
+		err = api.RequestJSON(&w, RouteFetchWebhookWithToken(webhook, token), &RequestOptions{Unauthenticated: true})
+	}
+	return
+}
+
 // Fetches all webhooks inside the channel.
 // -> https://developers.revolt.chat/api/#tag/Webhooks/operation/webhook_fetch_all_req
 func (api *API) FetchChannelWebhooks(channel ULID) (a []*Webhook, err error) {
@@ -2248,7 +2319,7 @@ type RoleResponse struct {
 
 // Creates a new server role.
 // -> https://developers.revolt.chat/api/#tag/Server-Permissions/operation/roles_create_req
-func (api *API) CreateRole(server ULID, params CreateRole) (rr *RoleResponse, err error) {
+func (api *API) CreateRole(server ULID, params *CreateRole) (rr *RoleResponse, err error) {
 	err = api.RequestJSON(&rr, RouteCreateRole(server), &RequestOptions{JSON: params})
 	return
 }
@@ -2285,7 +2356,7 @@ func (api *API) EditRole(server, role ULID, params *EditRole) (r *Role, err erro
 // allow [required] - Allow bit flags
 // deny [required] - Disallow bit flags
 // -> https://developers.revolt.chat/api/#tag/Server-Permissions/operation/permissions_set_req
-func (api *API) SetRoleServerPermission(server ULID, role ULID, allow Permissions, deny Permissions) (s *Server, err error) {
+func (api *API) SetRoleServerPermission(server, role ULID, allow, deny Permissions) (s *Server, err error) {
 	err = api.RequestJSON(&s, RouteSetRoleServerPermission(server, role), &RequestOptions{
 		JSON: struct {
 			Permissions any `json:"permissions"`
@@ -2299,7 +2370,7 @@ func (api *API) SetRoleServerPermission(server ULID, role ULID, allow Permission
 
 // Sets permissions for the default role in this server.
 // -> https://developers.revolt.chat/api/#tag/Server-Permissions/operation/permissions_set_default_req
-func (api *API) SetDefaultServerPermission(server ULID, params SetDefaultPermission) (s *Server, err error) {
+func (api *API) SetDefaultServerPermission(server ULID, params *SetDefaultPermission) (s *Server, err error) {
 	err = api.RequestJSON(&s, RouteSetDefaultServerPermission(server), &RequestOptions{JSON: params})
 	return
 }
@@ -2526,7 +2597,7 @@ type CreateAccount struct {
 
 // Create a new account.
 // -> https://developers.revolt.chat/api/#tag/Account/operation/create_account_create_account
-func (api *API) CreateAccount(params CreateAccount) error {
+func (api *API) CreateAccount(params *CreateAccount) error {
 	return api.RequestNone(RouteCreateAccount(), &RequestOptions{JSON: params, Unauthenticated: true})
 }
 

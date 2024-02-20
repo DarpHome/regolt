@@ -165,16 +165,27 @@ type UserRelation struct {
 type UserBadges int
 
 const (
+	// Active or significant contributor to Revolt
 	UserBadgesDeveloper UserBadges = 1 << (0 + iota)
+	// Helped [translate Revolt into another language](https://weblate.insrt.uk/engage/revolt)
 	UserBadgesTranslator
+	// [Donated to Revolt](https://insrt.uk/donate) (to get this badge, you must donate at least £3 and must either specify your Revolt ID when donating or show proof of your donation through PayPal or Ko-Fi)
 	UserBadgesSupporter
+	// Found a security issue and [responsibly disclosed it](https://github.com/revoltchat/.github/blob/master/.github/SECURITY.md)
 	UserBadgesResponsibleDisclosure
+	// Founded Revolt
 	UserBadgesFounder
+	// Part of the platform moderation team
 	UserBadgesPlatformModeration
 	UserBadgesActiveSupporter
+	// paw
 	UserBadgesPaw
+	// Was one of the first one thousand users to join
 	UserBadgesEarlyAdopter
+	// Whatever the funny joke is at any given time
 	UserBadgesRelevantJokeBadge1
+	// Whatever the other funny joke is at any given time
+	UserBadgesRelevantJokeBadge2
 )
 
 type Presence string
@@ -263,6 +274,7 @@ const (
 	OptimizedUserFlagsPaw
 	OptimizedUserFlagsEarlyAdopter
 	OptimizedUserFlagsRelevantJokeBadge1
+	OptimizedUserFlagsRelevantJokeBadge2
 )
 
 func (r *OptimizedUserFlags) updateFlags(flags UserFlags) {
@@ -313,57 +325,20 @@ func (r *OptimizedUserFlags) updateBadges(badges UserBadges) {
 	if (badges & UserBadgesRelevantJokeBadge1) != 0 {
 		(*r) |= OptimizedUserFlagsRelevantJokeBadge1
 	}
+	if (badges & UserBadgesRelevantJokeBadge2) != 0 {
+		(*r) |= OptimizedUserFlagsRelevantJokeBadge2
+	}
 }
-func NewOptimizedUserFlags(badges UserBadges, flags UserFlags, privileged, online bool) OptimizedUserFlags {
+func NewOptimizedUserFlags(flags UserFlags, badges UserBadges, privileged, online bool) OptimizedUserFlags {
 	r := OptimizedUserFlags(0)
-	if (flags & UserFlagsSuspended) != 0 {
-		r |= OptimizedUserFlagsSuspended
-	}
-	if (flags & UserFlagsDeleted) != 0 {
-		r |= OptimizedUserFlagsDeleted
-	}
-	if (flags & UserFlagsBanned) != 0 {
-		r |= OptimizedUserFlagsBanned
-	}
-	if (flags & UserFlagsSpam) != 0 {
-		r |= OptimizedUserFlagsSpam
-	}
+	r.updateFlags(flags)
 	if privileged {
 		r |= OptimizedUserFlagsPrivileged
 	}
 	if online {
 		r |= OptimizedUserFlagsOnline
 	}
-	if (badges & UserBadgesDeveloper) != 0 {
-		r |= OptimizedUserFlagsDeveloper
-	}
-	if (badges & UserBadgesTranslator) != 0 {
-		r |= OptimizedUserFlagsTranslator
-	}
-	if (badges & UserBadgesSupporter) != 0 {
-		r |= OptimizedUserFlagsSupporter
-	}
-	if (badges & UserBadgesResponsibleDisclosure) != 0 {
-		r |= OptimizedUserFlagsResponsibleDisclosure
-	}
-	if (badges & UserBadgesFounder) != 0 {
-		r |= OptimizedUserFlagsFounder
-	}
-	if (badges & UserBadgesPlatformModeration) != 0 {
-		r |= OptimizedUserFlagsPlatformModeration
-	}
-	if (badges & UserBadgesActiveSupporter) != 0 {
-		r |= OptimizedUserFlagsActiveSupporter
-	}
-	if (badges & UserBadgesPaw) != 0 {
-		r |= OptimizedUserFlagsPaw
-	}
-	if (badges & UserBadgesEarlyAdopter) != 0 {
-		r |= OptimizedUserFlagsEarlyAdopter
-	}
-	if (badges & UserBadgesRelevantJokeBadge1) != 0 {
-		r |= OptimizedUserFlagsRelevantJokeBadge1
-	}
+	r.updateBadges(badges)
 	return r
 }
 
@@ -469,7 +444,7 @@ func (u *User) ToOptimized() *OptimizedUser {
 		Profile:       u.Profile,
 		Bot:           u.Bot,
 		Relationship:  u.Relationship.ToOptimized(),
-		Flags:         NewOptimizedUserFlags(u.Badges, u.Flags, u.Privileged, u.Online),
+		Flags:         NewOptimizedUserFlags(u.Flags, u.Badges, u.Privileged, u.Online),
 	}
 	if u.Avatar != nil {
 		o.Avatar = u.Avatar.ToOptimized()
@@ -1268,6 +1243,8 @@ type Webhook struct {
 	Avatar *AutumnFile `json:"avatar"`
 	// The channel this webhook belongs to
 	ChannelID ULID `json:"channel_id"`
+	// The permissions for the webhook
+	Permissions Permissions `json:"permissions"`
 	// The private token for the webhook
 	Token string `json:"token"`
 }
