@@ -1566,7 +1566,7 @@ type SendableEmbed struct {
 	URL         string `json:"url,omitempty"`
 	Title       string `json:"title,omitempty"`
 	Description string `json:"description,omitempty"`
-	Media       string `json:"medi,omitempty"`
+	Media       string `json:"media,omitempty"`
 	Colour      string `json:"colour,omitempty"`
 }
 
@@ -1691,7 +1691,6 @@ func (api *API) SearchForMessages(channel ULID, params *SearchForMessages) (m *M
 			v.Set("include_users", "false")
 		}
 	}
-
 	if params.IncludeUsers != nil && *params.IncludeUsers {
 		err = api.RequestJSON(&m, RouteSearchForMessages(channel), &RequestOptions{QueryValues: v})
 	} else {

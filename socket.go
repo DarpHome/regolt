@@ -304,6 +304,7 @@ type Events struct {
 	ServerRoleDelete   *EventController[ServerRoleDelete]
 	UserUpdate         *EventController[UserUpdate]
 	UserRelationship   *EventController[UserRelationship]
+	UserSettingsUpdate *EventController[UserSettingsUpdate]
 	UserPlatformWipe   *EventController[UserPlatformWipe]
 	// Emoji created, the event object has the same schema as the Emoji object in the API with the addition of an event type.
 	EmojiCreate *EventController[CustomEmoji]
@@ -349,6 +350,7 @@ func (e *Events) init() {
 	e.ServerRoleDelete = NewEventController[ServerRoleDelete]()
 	e.UserUpdate = NewEventController[UserUpdate]()
 	e.UserRelationship = NewEventController[UserRelationship]()
+	e.UserSettingsUpdate = NewEventController[UserSettingsUpdate]()
 	e.UserPlatformWipe = NewEventController[UserPlatformWipe]()
 	e.EmojiCreate = NewEventController[CustomEmoji]()
 	e.EmojiDelete = NewEventController[EmojiDelete]()
@@ -521,6 +523,10 @@ func (socket *Socket) OnUserRelationship(f func(UserRelationship)) *Subscription
 	return socket.Events.UserRelationship.Listen(f)
 }
 
+func (socket *Socket) OnUserSettingsUpdate(f func(UserSettingsUpdate)) *Subscription[UserSettingsUpdate] {
+	return socket.Events.UserSettingsUpdate.Listen(f)
+}
+
 func (socket *Socket) OnUserPlatformWipe(f func(UserPlatformWipe)) *Subscription[UserPlatformWipe] {
 	return socket.Events.UserPlatformWipe.Listen(f)
 }
@@ -624,11 +630,11 @@ func (socket *Socket) Connect() error {
 		return err
 	}
 	conn.SetCloseHandler(func(code int, text string) error {
-		if err := socket.close(); err != nil {
-			return err
-		}
 		if socket.closed {
 			return nil
+		}
+		if err := socket.close(); err != nil {
+			return err
 		}
 		// reinitialize
 		socket.lastPingReq = time.Time{}
@@ -1195,6 +1201,13 @@ func (socket *Socket) process(s []byte) {
 				u.Relationship = r.Status.ToOptimized()
 			})
 		})
+	case "UserSettingsUpdate":
+		t := UserSettingsUpdate{}
+		if err := json.Unmarshal(s, &t); err != nil {
+			socket.emitError(err)
+			return
+		}
+		socket.Events.UserSettingsUpdate.EmitInGoroutines(t)
 	case "UserPlatformWipe":
 		t := UserPlatformWipe{}
 		if err := json.Unmarshal(s, &t); err != nil {
@@ -1284,6 +1297,12 @@ func (socket *Socket) listener() {
 		}
 		m, p, err := socket.Connection.ReadMessage()
 		if err != nil {
+			if _, ok := err.(*websocket.CloseError); ok {
+				if err = socket.Open(); err != nil {
+					socket.Events.Error.Emit(err)
+				}
+				return
+			}
 			socket.close()
 			socket.Events.Error.Emit(err)
 			return

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -31,8 +32,12 @@ func (s *Scanner) Back() {
 	s.Position--
 }
 
+func (s *Scanner) CanNext() bool {
+	return len(s.Target) != s.Position
+}
+
 func (s *Scanner) GetByte() (byte, bool) {
-	if len(s.Target) == s.Position {
+	if !s.CanNext() {
 		return 0, false
 	}
 	r := s.Target[s.Position]
@@ -85,6 +90,42 @@ func (ctx *Context) Integer(name string, defaultValue ...int64) int64 {
 		return int64(v)
 	case int64:
 		return v
+	}
+	if len(defaultValue) != 0 {
+		return defaultValue[0]
+	}
+	return 0
+}
+
+func (ctx *Context) Uinteger(name string, defaultValue ...uint64) uint64 {
+	o, ok := ctx.Options[name]
+	if !ok {
+		if len(defaultValue) != 0 {
+			return defaultValue[0]
+		}
+		return 0
+	}
+	switch v := o.(type) {
+	case uint:
+		return uint64(v)
+	case uint8:
+		return uint64(v)
+	case uint16:
+		return uint64(v)
+	case uint32:
+		return uint64(v)
+	case uint64:
+		return v
+	case int:
+		return uint64(v)
+	case int8:
+		return uint64(v)
+	case int16:
+		return uint64(v)
+	case int32:
+		return uint64(v)
+	case int64:
+		return uint64(v)
 	}
 	if len(defaultValue) != 0 {
 		return defaultValue[0]
@@ -191,7 +232,7 @@ func (sio SignedIntOption) Parse(ctx *Context) (any, error) {
 		r = append(r, b)
 	}
 	if len(r) == 0 && sio.Required {
-		return "", OptionRequired{Name: sio.Name}
+		return int64(0), OptionRequired{Name: sio.Name}
 	}
 	base := sio.Base
 	if base == 0 {
@@ -202,6 +243,9 @@ func (sio SignedIntOption) Parse(ctx *Context) (any, error) {
 		bitSize = 64
 	}
 	i, err := strconv.ParseInt(string(r), base, bitSize)
+	if err != nil && !sio.Required {
+		return int64(0), nil
+	}
 	return int64(i), err
 }
 
@@ -220,6 +264,10 @@ func (g Greedy) GetDescription() string {
 func (g Greedy) Parse(ctx *Context) (any, error) {
 	a := []any{}
 	for {
+		if !ctx.Scanner.CanNext() {
+			fmt.Println("??")
+			break
+		}
 		b, err := g.Option.Parse(ctx)
 		if err != nil {
 			break
@@ -255,7 +303,7 @@ func (uio UnsignedIntOption) Parse(ctx *Context) (any, error) {
 		r = append(r, b)
 	}
 	if len(r) == 0 && uio.Required {
-		return "", OptionRequired{Name: uio.Name}
+		return uint64(0), OptionRequired{Name: uio.Name}
 	}
 	base := uio.Base
 	if base == 0 {
@@ -266,6 +314,9 @@ func (uio UnsignedIntOption) Parse(ctx *Context) (any, error) {
 		bitSize = 64
 	}
 	i, err := strconv.ParseUint(string(r), base, bitSize)
+	if err != nil && !uio.Required {
+		return uint64(0), nil
+	}
 	return uint64(i), err
 }
 
@@ -388,10 +439,12 @@ func (c *Commands) Handle(ctx *Context) {
 		return
 	}
 	ctx.Command = co
-	for _, o := range co.Options {
+	for i := 0; i < len(co.Options); i++ {
+		o := co.Options[i]
 		name := o.GetName()
 		r, err := o.Parse(ctx)
 		if err != nil {
+			c.Socket.Events.Error.Emit(err)
 			return
 		}
 		ctx.Options[name] = r

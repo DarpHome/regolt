@@ -65,7 +65,9 @@ func (c *Cache1[T]) Set(v *T) {
 	c.Cache[(*v).GetKey()] = v
 }
 
-//
+func (c *Cache1[T]) Size() int {
+	return len(c.Cache)
+}
 
 type Cache2CheckContext[T Cacheable] struct {
 	Cache  *Cache2[T]
@@ -106,7 +108,7 @@ func (c *Cache2[T]) ins(parent ULID, e *T) {
 	i := (*e).GetKey()
 	_, ok = m[i]
 	m[i] = e
-	if ok {
+	if !ok {
 		c.total++
 	}
 }
@@ -166,6 +168,14 @@ func (c *Cache2[T]) DelGroup(parent ULID) {
 		c.total -= len(m)
 		delete(c.Cache, parent)
 	}
+}
+
+func (c *Cache2[T]) GroupsCount() int {
+	return len(c.Cache)
+}
+
+func (c *Cache2[T]) Size() int {
+	return c.total
 }
 
 func (c *Cache2[T]) PartiallyUpdate(parent, id ULID, updater func(m *T)) {

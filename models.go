@@ -654,6 +654,7 @@ func (c OptimizedChannel) GetKey() ULID {
 func (c *Channel) ToOptimized() *OptimizedChannel {
 	oc := &OptimizedChannel{
 		Type:               c.Type.ToOptimized(),
+		ID:                 c.ID,
 		Server:             c.Server,
 		Name:               c.Name,
 		Owner:              c.Owner,
