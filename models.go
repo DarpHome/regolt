@@ -5,7 +5,26 @@ import (
 	"time"
 )
 
-const iso8601Template = "2006-01-02T15:04:05-0700"
+const iso8601Template = "2006-01-02T15:04:05.999Z"
+
+type Time time.Time
+
+func (t Time) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Time(t).Format(iso8601Template))
+}
+
+func (t *Time) UnmarshalJSON(d []byte) error {
+	var s string
+	if err := json.Unmarshal(d, &s); err != nil {
+		return err
+	}
+	u, err := time.Parse(iso8601Template, s)
+	if err != nil {
+		return err
+	}
+	*t = Time(u)
+	return nil
+}
 
 // TODO: CSS colour type
 
@@ -144,6 +163,7 @@ func (o *AutumnFile) ToOptimized() *OptimizedAutumnFile {
 	return r
 }
 
+// User's relationship with another user (or themselves)
 type RelationshipStatus string
 
 const (
@@ -162,64 +182,81 @@ type UserRelation struct {
 	Status RelationshipStatus `json:"status"`
 }
 
+// User badge bitfield
 type UserBadges int
 
 const (
 	// Active or significant contributor to Revolt
 	UserBadgesDeveloper UserBadges = 1 << (0 + iota)
-	// Helped [translate Revolt into another language](https://weblate.insrt.uk/engage/revolt)
+	// Helped translate Revolt
 	UserBadgesTranslator
-	// [Donated to Revolt](https://insrt.uk/donate) (to get this badge, you must donate at least £3 and must either specify your Revolt ID when donating or show proof of your donation through PayPal or Ko-Fi)
+	// Monetarily supported Revolt
 	UserBadgesSupporter
-	// Found a security issue and [responsibly disclosed it](https://github.com/revoltchat/.github/blob/master/.github/SECURITY.md)
+
+	// // Found a security issue and [responsibly disclosed it](https://github.com/revoltchat/.github/blob/master/.github/SECURITY.md)
+
+	// Responsibly disclosed a security issue
 	UserBadgesResponsibleDisclosure
-	// Founded Revolt
+	// Revolt Founder
 	UserBadgesFounder
-	// Part of the platform moderation team
+	// Platform moderator
 	UserBadgesPlatformModeration
+	// Active monetary supporter
 	UserBadgesActiveSupporter
-	// paw
+	// 🦊🦝
 	UserBadgesPaw
-	// Was one of the first one thousand users to join
+	// Joined as one of the first 1000 users in 2021
 	UserBadgesEarlyAdopter
-	// Whatever the funny joke is at any given time
+	// Amogus
 	UserBadgesRelevantJokeBadge1
-	// Whatever the other funny joke is at any given time
+	// Low resolution troll face
 	UserBadgesRelevantJokeBadge2
 )
 
 type Presence string
 
 const (
-	PresenceOnline    Presence = "Online"
-	PresenceIdle      Presence = "Idle"
-	PresenceFocus     Presence = "Focus"
-	PresenceBusy      Presence = "Busy"
+	// User is online
+	PresenceOnline Presence = "Online"
+	// User is not currently available
+	PresenceIdle Presence = "Idle"
+	// User is focusing / will only receive mentions
+	PresenceFocus Presence = "Focus"
+	// User is busy / will not receive any notifications
+	PresenceBusy Presence = "Busy"
+	// User appears to be offline
 	PresenceInvisible Presence = "Invisible"
 )
 
+// User's active status
 type UserStatus struct {
 	// Custom status text
-	Text string `json:"text"`
+	Text string `json:"text,omitempty"`
 	// Presence status
-	Presence Presence `json:"presence"`
+	Presence Presence `json:"presence,omitempty"`
 }
 
 type UserProfile struct {
 	// Text content on user's profile
-	Content    string      `json:"content"`
-	Background *AutumnFile `json:"background"`
+	Content    string      `json:"content,omitempty"`
+	Background *AutumnFile `json:"background,omitempty"`
 }
 
+// User flag enum
 type UserFlags int
 
 const (
+	// User has been suspended from the platform
 	UserFlagsSuspended UserFlags = 1 << (0 + iota)
+	// User has deleted their account
 	UserFlagsDeleted
+	// User was banned off the platform
 	UserFlagsBanned
+	// User was marked as spam and removed from platform
 	UserFlagsSpam
 )
 
+// Bot information for if the user is a bot
 type UserBot struct {
 	// ID of the owner of this bot
 	Owner ULID `json:"owner"`
@@ -233,24 +270,25 @@ type User struct {
 	// Discriminator
 	Discriminator string `json:"discriminator"`
 	// Display name
-	DisplayName string      `json:"display_name"`
-	Avatar      *AutumnFile `json:"avatar"`
+	DisplayName string `json:"display_name,omitempty"`
+	// Avatar attachment
+	Avatar *AutumnFile `json:"avatar,omitempty"`
 	// Relationships with other users
-	Relations []*UserRelation `json:"relations"`
+	Relations []*UserRelation `json:"relations,omitempty"`
 	// Bitfield of user badges
 	Badges UserBadges `json:"badges"`
 	// User's active status
-	Status *UserStatus `json:"status"`
+	Status *UserStatus `json:"status,omitempty"`
 	// User's profile
-	Profile *UserProfile `json:"profile"`
+	Profile *UserProfile `json:"profile,omitempty"`
 	// Enum of user flags
 	Flags UserFlags `json:"flags"`
 	// Whether this user is privileged
-	Privileged bool `json:"privileged"`
-	// Bot information for if the user is a bot
-	Bot *UserBot `json:"bot"`
+	Privileged bool `json:"privileged,omitempty"`
+	// Bot information
+	Bot *UserBot `json:"bot,omitempty"`
 	// User's relationship with another user (or themselves)
-	Relationship RelationshipStatus `json:"relationship"`
+	Relationship RelationshipStatus `json:"relationship,omitempty"`
 	// Whether this user is currently online
 	Online bool `json:"online"`
 }
@@ -553,30 +591,30 @@ type Channel struct {
 	// Unique ID
 	ID ULID `json:"_id"`
 	// ID of the server this channel belongs to
-	Server ULID `json:"server"`
+	Server ULID `json:"server,omitempty"`
 	// Display name of the channel
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 	// Whether this direct message channel is currently open on both sides
 	Active bool `json:"active"`
 	// User ID of the owner of the group
-	Owner ULID `json:"owner"`
+	Owner ULID `json:"owner,omitempty"`
 	// Channel description
-	Description string      `json:"description"`
-	Icon        *AutumnFile `json:"icon"`
+	Description string      `json:"description,omitempty"`
+	Icon        *AutumnFile `json:"icon,omitempty"`
 	// 2-tuple of user ids participating in direct message / Array of user ids participating in channel
-	Recipients []ULID `json:"recipients"`
+	Recipients []ULID `json:"recipients,omitempty"`
 	// ID of the last message sent in this channel
-	LastMessageID ULID `json:"last_message_id"`
+	LastMessageID ULID `json:"last_message_id,omitempty"`
 	// Permissions assigned to members of this group (does not apply to the owner of the group)
-	Permissions Permissions `json:"permissions"`
+	Permissions Permissions `json:"permissions,omitempty"`
 	// Representation of a single permission override as it appears on models and in the database
-	DefaultPermissions *PermissionOverride `json:"default_permissions"`
+	DefaultPermissions *PermissionOverride `json:"default_permissions,omitempty"`
 	// Permissions assigned based on role to this channel
-	RolePermissions map[ULID]PermissionOverride `json:"role_permissions"`
+	RolePermissions map[ULID]PermissionOverride `json:"role_permissions,omitempty"`
 	// ID of the user this channel belongs to
-	User ULID `json:"user"`
+	User ULID `json:"user,omitempty"`
 	// Whether this group is marked as not safe for work
-	NSFW bool `json:"nsfw"`
+	NSFW bool `json:"nsfw,omitempty"`
 }
 
 func (c Channel) GetKey() ULID {
@@ -726,15 +764,15 @@ type Bot struct {
 	// Whether the bot is public (may be invited by anyone)
 	Public bool `json:"public"`
 	// Whether to enable analytics
-	Analytics bool `json:"analytics"`
+	Analytics bool `json:"analytics,omitempty"`
 	// Whether this bot should be publicly discoverable
-	Discoverable bool `json:"discoverable"`
+	Discoverable bool `json:"discoverable,omitempty"`
 	// Reserved; URL for handling interactions
-	InteractionsURL string `json:"interactions_url"`
+	InteractionsURL string `json:"interactions_url,omitempty"`
 	// URL for terms of service
-	TermsOfServiceURL string `json:"terms_of_service_url"`
+	TermsOfServiceURL string `json:"terms_of_service_url,omitempty"`
 	// URL for privacy policy
-	PrivacyPolicyURL string `json:"privacy_policy_url"`
+	PrivacyPolicyURL string `json:"privacy_policy_url,omitempty"`
 	// Enum of bot flags
 	Flags BotFlags `json:"flags"`
 }
@@ -863,12 +901,12 @@ func (s SystemEventMessageType) ToOptimized() OptimizedSystemEventMessageType {
 // Representation of a system event message
 type SystemEventMessage struct {
 	Type    SystemEventMessageType `json:"type"`
-	Content string                 `json:"content"`
-	ID      ULID                   `json:"id"`
-	Name    string                 `json:"name"`
-	By      ULID                   `json:"by"`
-	From    ULID                   `json:"from"`
-	To      ULID                   `json:"to"`
+	Content string                 `json:"content,omitempty"`
+	ID      ULID                   `json:"id,omitempty"`
+	Name    string                 `json:"name,omitempty"`
+	By      ULID                   `json:"by,omitempty"`
+	From    ULID                   `json:"from,omitempty"`
+	To      ULID                   `json:"to,omitempty"`
 }
 
 type OptimizedSystemEventMessage struct {
@@ -1130,7 +1168,7 @@ type MessageInteractions struct {
 	Reactions []string `json:"reactions,omitempty"`
 	// Whether reactions should be restricted to the given list
 	// Can only be set to true if reactions list is of at least length 1
-	RestrictReactions bool `json:"restrict_reactions"`
+	RestrictReactions bool `json:"restrict_reactions,omitempty"`
 }
 
 // Name and / or avatar override information
@@ -1148,30 +1186,30 @@ type Message struct {
 	// Unique ID
 	ID ULID `json:"_id"`
 	// Unique value generated by client sending this message
-	Nonce *string `json:"nonce"`
+	Nonce *string `json:"nonce,omitempty"`
 	// ID of the channel this message was sent in
 	Channel ULID `json:"channel"`
 	// ID of the user or webhook that sent this message
 	Author ULID `json:"author"`
-	// Information about the webhook bundled with Message
-	Webhook *MessageWebhook `json:"webhook"`
+	// The webhook that sent this message
+	Webhook *MessageWebhook `json:"webhook,omitempty"`
 	// Message content
-	Content string              `json:"content"`
-	System  *SystemEventMessage `json:"system"`
+	Content string              `json:"content,omitempty"`
+	System  *SystemEventMessage `json:"system,omitempty"`
 	// Array of attachments
-	Attachments []*AutumnFile `json:"attachments"`
-	// ISO8601 formatted timestamp
-	Edited *time.Time `json:"edited"`
+	Attachments []*AutumnFile `json:"attachments,omitempty"`
+	// Time at which this message was last edited
+	Edited *Time `json:"edited"`
 	// Attached embeds to this message
-	Embeds []*Embed `json:"embeds"`
-	// Array of user ids mentioned in this message
-	Mentions []ULID `json:"mentions"`
-	// Array of message ids this message is replying to
-	Replies []ULID `json:"replies"`
+	Embeds []*Embed `json:"embeds,omitempty"`
+	// Array of user IDs mentioned in this message
+	Mentions []ULID `json:"mentions,omitempty"`
+	// Array of message IDs this message is replying to
+	Replies []ULID `json:"replies,omitempty"`
 	// Hashmap of emoji IDs to array of user IDs
-	Reactions    map[string][]ULID    `json:"reactions"`
-	Interactions *MessageInteractions `json:"interactions"`
-	Masquerade   *Masquerade          `json:"masquerade"`
+	Reactions    map[string][]ULID    `json:"reactions,omitempty"`
+	Interactions *MessageInteractions `json:"interactions,omitempty"`
+	Masquerade   *Masquerade          `json:"masquerade,omitempty"`
 }
 
 func (o Message) GetKey() ULID {
@@ -1187,7 +1225,7 @@ type OptimizedMessage struct {
 	Content      string
 	System       *OptimizedSystemEventMessage
 	Attachments  []*OptimizedAutumnFile
-	Edited       *time.Time
+	Edited       *Time
 	Embeds       []*OptimizedEmbed
 	Mentions     []ULID
 	Replies      []ULID
@@ -1228,14 +1266,18 @@ type MemberID struct {
 }
 
 type Member struct {
-	ID       MemberID  `json:"_id"`
-	JoinedAt time.Time `json:"joined_at"`
+	// Unique member ID
+	ID MemberID `json:"_id"`
+	// Time at which this user joined the server
+	JoinedAt Time `json:"joined_at"`
 	// Member's nickname
-	Nickname string      `json:"nickname"`
-	Avatar   *AutumnFile `json:"avatar"`
+	Nickname string `json:"nickname,omitempty"`
+	// Avatar attachment
+	Avatar *AutumnFile `json:"avatar,omitempty"`
 	// Member's roles
-	Roles   []ULID     `json:"roles"`
-	Timeout *time.Time `json:"timeout"`
+	Roles []ULID `json:"roles,omitempty"`
+	// Timestamp this member is timed out until
+	Timeout *Time `json:"timeout,omitempty"`
 }
 
 func (o Member) GetKey() ULID {
@@ -1245,26 +1287,27 @@ func (o Member) GetKey() ULID {
 type PartialMember struct {
 	ID MemberID `json:"_id"`
 	// Member's nickname
-	Nickname *string     `json:"nickname"`
-	Avatar   *AutumnFile `json:"avatar"`
+	Nickname *string     `json:"nickname,omitempty"`
+	Avatar   *AutumnFile `json:"avatar,omitempty"`
 	// Member's roles
-	Roles *[]ULID `json:"roles"`
+	Roles *[]ULID `json:"roles,omitempty"`
 	// ISO8601 formatted timestamp
-	Timeout *time.Time `json:"timeout"`
+	Timeout *Time `json:"timeout,omitempty"`
 }
 
 type Webhook struct {
 	// Webhook ID
 	ID ULID `json:"id"`
 	// The name of the webhook
-	Name   string      `json:"name"`
-	Avatar *AutumnFile `json:"avatar"`
+	Name string `json:"name"`
+	// The avatar of the webhook
+	Avatar *AutumnFile `json:"avatar,omitempty"`
 	// The channel this webhook belongs to
 	ChannelID ULID `json:"channel_id"`
 	// The permissions for the webhook
 	Permissions Permissions `json:"permissions"`
 	// The private token for the webhook
-	Token string `json:"token"`
+	Token string `json:"token,omitempty"`
 }
 
 type OptimizedWebhook struct {
@@ -1304,10 +1347,10 @@ type PartialWebhook struct {
 	// Webhook ID
 	ID ULID `json:"id"`
 	// The name of the webhook
-	Name   string      `json:"name"`
-	Avatar *AutumnFile `json:"avatar"`
+	Name   string      `json:"name,omitempty"`
+	Avatar *AutumnFile `json:"avatar,omitempty"`
 	// The permissions for the webhook
-	Permissions *Permissions `json:"permissions"`
+	Permissions *Permissions `json:"permissions,omitempty"`
 	// The private token for the webhook
 	// Token string `json:"token"` // removed by backend
 }
@@ -1323,13 +1366,13 @@ type Category struct {
 
 type SystemMessages struct {
 	// ID of channel to send user join messages in
-	UserJoined ULID `json:"user_joined"`
+	UserJoined ULID `json:"user_joined,omitempty"`
 	// ID of channel to send user left messages in
-	UserLeft ULID `json:"user_left"`
+	UserLeft ULID `json:"user_left,omitempty"`
 	// ID of channel to send user kicked messages in
-	UserKicked ULID `json:"user_kicked"`
+	UserKicked ULID `json:"user_kicked,omitempty"`
 	// ID of channel to send user banned messages in
-	UserBanned ULID `json:"user_banned"`
+	UserBanned ULID `json:"user_banned,omitempty"`
 }
 
 type Role struct {
@@ -1339,9 +1382,9 @@ type Role struct {
 	Permissions PermissionOverride `json:"permissions"`
 	// Colour used for this role
 	// This can be any valid CSS colour
-	Colour string `json:"colour"`
+	Colour string `json:"colour,omitempty"`
 	// Whether this role should be shown separately on the member sidebar
-	Hoist bool `json:"hoist"`
+	Hoist bool `json:"hoist,omitempty"`
 	// Default: `0`
 	// Ranking of this role
 	Rank int `json:"rank"`
@@ -1389,17 +1432,17 @@ func (o OptimizedRole) GetKey() ULID {
 
 type PartialRole struct {
 	// Role name
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 	// Representation of a single permission override as it appears on models and in the database
-	Permissions *PermissionOverride `json:"permissions"`
+	Permissions *PermissionOverride `json:"permissions,omitempty"`
 	// Colour used for this role
 	// This can be any valid CSS colour
-	Colour string `json:"colour"`
+	Colour string `json:"colour,omitempty"`
 	// Whether this role should be shown separately on the member sidebar
-	Hoist *bool `json:"hoist"`
+	Hoist *bool `json:"hoist,omitempty"`
 	// Default: `0`
 	// Ranking of this role
-	Rank *int `json:"rank"`
+	Rank *int `json:"rank,omitempty"`
 }
 
 type ServerFlags int
@@ -1417,27 +1460,27 @@ type Server struct {
 	// Name of the server
 	Name string `json:"name"`
 	// Description for the server
-	Description string `json:"description"`
+	Description string `json:"description,omitempty"`
 	// Channels within this server
 	Channels []ULID `json:"channels"`
 	// Categories for this server
-	Categories []*Category `json:"categories"`
+	Categories []*Category `json:"categories,omitempty"`
 	// System message channel assignments
-	SystemMessages *SystemMessages `json:"system_messages"`
+	SystemMessages *SystemMessages `json:"system_messages,omitempty"`
 	// Roles for this server
-	Roles map[ULID]*Role `json:"roles"`
+	Roles map[ULID]*Role `json:"roles,omitempty"`
 	// Default set of server and channel permissions
 	DefaultPermissions Permissions `json:"default_permissions"`
-	Icon               *AutumnFile `json:"icon"`
-	Banner             *AutumnFile `json:"banner"`
+	Icon               *AutumnFile `json:"icon,omitempty"`
+	Banner             *AutumnFile `json:"banner,omitempty"`
 	// Bitfield of server flags
 	Flags ServerFlags `json:"flags"`
 	// Whether this server is flagged as not safe for work
-	NSFW bool `json:"nsfw"`
+	NSFW bool `json:"nsfw,omitempty"`
 	// Whether to enable analytics
-	Analytics bool `json:"analytics"`
+	Analytics bool `json:"analytics,omitempty"`
 	// Whether this server should be publicly discoverable
-	Discoverable bool `json:"discoverable"`
+	Discoverable bool `json:"discoverable,omitempty"`
 }
 
 type OptimizedServerFlags int
@@ -1521,31 +1564,31 @@ type PartialServer struct {
 	// Unique ID
 	ID ULID `json:"_id"`
 	// User ID of the owner
-	Owner string `json:"owner"`
+	Owner string `json:"owner,omitempty"`
 	// Name of the server
-	Name *string `json:"name"`
+	Name *string `json:"name,omitempty"`
 	// Description for the server
-	Description *string `json:"description"`
+	Description *string `json:"description,omitempty"`
 	// Channels within this server
-	Channels *[]ULID `json:"channels"`
+	Channels *[]ULID `json:"channels,omitempty"`
 	// Categories for this server
-	Categories *[]*Category `json:"categories"`
+	Categories *[]*Category `json:"categories,omitempty"`
 	// System message channel assignments
-	SystemMessages *SystemMessages `json:"system_messages"`
+	SystemMessages *SystemMessages `json:"system_messages,omitempty"`
 	// Roles for this server
-	Roles *map[ULID]*Role `json:"roles"`
+	Roles *map[ULID]*Role `json:"roles,omitempty"`
 	// Default set of server and channel permissions
-	DefaultPermissions *Permissions `json:"default_permissions"`
-	Icon               *AutumnFile  `json:"icon"`
-	Banner             *AutumnFile  `json:"banner"`
+	DefaultPermissions *Permissions `json:"default_permissions,omitempty"`
+	Icon               *AutumnFile  `json:"icon,omitempty"`
+	Banner             *AutumnFile  `json:"banner,omitempty"`
 	// Bitfield of server flags
-	Flags *ServerFlags `json:"flags"`
+	Flags *ServerFlags `json:"flags,omitempty"`
 	// Whether this server is flagged as not safe for work
-	NSFW *bool `json:"nsfw"`
+	NSFW *bool `json:"nsfw,omitempty"`
 	// Whether to enable analytics
-	Analytics *bool `json:"analytics"`
+	Analytics *bool `json:"analytics,omitempty"`
 	// Whether this server should be publicly discoverable
-	Discoverable *bool `json:"discoverable"`
+	Discoverable *bool `json:"discoverable,omitempty"`
 }
 
 type CustomEmojiParentType string
@@ -1555,24 +1598,25 @@ const (
 	CustomEmojiParentTypeDetached CustomEmojiParentType = "Detached"
 )
 
+// Information about what owns this emoji
 type CustomEmojiParent struct {
 	Type CustomEmojiParentType `json:"type"`
-	ID   ULID                  `json:"id"`
+	ID   ULID                  `json:"id,omitempty"`
 }
 
 type CustomEmoji struct {
 	// Unique ID
 	ID ULID `json:"_id"`
-	// Information about what owns this emoji
+	// What owns this emoji
 	Parent CustomEmojiParent `json:"parent"`
-	// Uploader user iD
+	// Uploader user ID
 	CreatorID ULID `json:"creator_id"`
 	// Emoji name
 	Name string `json:"name"`
 	// Whether the emoji is animated
-	Animated bool `json:"animated"`
+	Animated bool `json:"animated,omitempty"`
 	// Whether the emoji is marked as NSFW
-	NSFW bool `json:"nsfw"`
+	NSFW bool `json:"nsfw,omitempty"`
 }
 
 type OptimizedCustomEmojiFlags int
@@ -1683,16 +1727,16 @@ type UnreadMessageID struct {
 type UnreadMessage struct {
 	ID UnreadMessageID `json:"_id"`
 	// ID of the last message read in this channel by a user
-	LastID ULID `json:"last_id"`
+	LastID ULID `json:"last_id,omitempty"`
 	// Array of message IDs that mention the user
-	Mentions []ULID `json:"mentions"`
+	Mentions []ULID `json:"mentions,omitempty"`
 }
 
 type IndexAccesses struct {
 	// Operations since timestamp
 	Ops int `json:"ops"`
 	// ISO8601 formatted timestamp
-	Since time.Time `json:"since"`
+	Since Time `json:"since"`
 }
 
 type Index struct {
@@ -1732,8 +1776,8 @@ type QueryExecStats struct {
 
 type CollectionStats struct {
 	// Namespace
-	Namespace string    `json:"ns"`
-	LocalTime time.Time `json:"localTime"`
+	Namespace string `json:"ns"`
+	LocalTime Time   `json:"localTime"`
 	// Latency stats
 	LatencyStats map[string]*LatencyStats `json:"latencyStats"`
 	// Collection query execution stats
@@ -1768,24 +1812,43 @@ const (
 type ReportReason string
 
 const (
-	ReportReasonNoneSpecified        ReportReason = "NoneSpecified"
-	ReportReasonIllegal              ReportReason = "Illegal"              // Message/Server
-	ReportReasonIllegalGoods         ReportReason = "IllegalGoods"         // Message/Server
-	ReportReasonIllegalExtortion     ReportReason = "IllegalExtortion"     // Message/Server
-	ReportReasonIllegalPornography   ReportReason = "IllegalPornography"   // Message/Server
-	ReportReasonIllegalHacking       ReportReason = "IllegalHacking"       // Message/Server
-	ReportReasonExtremeViolence      ReportReason = "ExtremeViolence"      // Message/Server
-	ReportReasonProtesHarm           ReportReason = "ProtesHarm"           // Message/Server
-	ReportReasonUnsolicitedSpam      ReportReason = "UnsolicitedSpam"      // Message/Server/User
-	ReportReasonRaid                 ReportReason = "Raid"                 // Message/Server
-	ReportReasonSpamAbuse            ReportReason = "SpamAbuse"            // Message/Server/User
-	ReportReasonScamsFraud           ReportReason = "ScamsFraud"           // Message/Server
-	ReportReasonMalware              ReportReason = "Malware"              // Message/Server
-	ReportReasonHarassment           ReportReason = "Harassment"           // Message/Server
+	// No reason has been specified
+	ReportReasonNoneSpecified ReportReason = "NoneSpecified"
+	// Illegal content catch-all reason
+	ReportReasonIllegal ReportReason = "Illegal" // Message/Server
+	// Selling or facilitating use of drugs or other illegal goods
+	ReportReasonIllegalGoods ReportReason = "IllegalGoods" // Message/Server
+	// Extortion or blackmail
+	ReportReasonIllegalExtortion ReportReason = "IllegalExtortion" // Message/Server
+	// Revenge or child pornography
+	ReportReasonIllegalPornography ReportReason = "IllegalPornography" // Message/Server
+	// Illegal hacking activity
+	ReportReasonIllegalHacking ReportReason = "IllegalHacking" // Message/Server
+	// Extreme violence, gore, or animal cruelty
+	// With exception to violence potrayed in media / creative arts
+	ReportReasonExtremeViolence ReportReason = "ExtremeViolence" // Message/Server
+	// Content that promotes harm to others / self
+	ReportReasonProtesHarm ReportReason = "ProtesHarm" // Message/Server
+	// Unsolicited advertisements
+	ReportReasonUnsolicitedSpam ReportReason = "UnsolicitedSpam" // Message/Server/User
+	// This is a raid
+	ReportReasonRaid ReportReason = "Raid" // Message/Server
+	// Spam or platform abuse / User is sending spam or otherwise abusing the platform
+	ReportReasonSpamAbuse ReportReason = "SpamAbuse" // Message/Server/User
+	// Scams or fraud
+	ReportReasonScamsFraud ReportReason = "ScamsFraud" // Message/Server
+	// Distribution of malware of malicious links
+	ReportReasonMalware ReportReason = "Malware" // Message/Server
+	// Harassment or abuse targeted at another user
+	ReportReasonHarassment ReportReason = "Harassment" // Message/Server
+	// User's profile contains inappropriate content for a general audience
 	ReportReasonInappropriateProfile ReportReason = "InappropriateProfile" // User
-	ReportReasonImpersonation        ReportReason = "Impersonation"        // User
-	ReportReasonBanEvasion           ReportReason = "BanEvasion"           // User
-	ReportReasonUnderage             ReportReason = "Underage"             // User
+	// User is impersonating another user
+	ReportReasonImpersonation ReportReason = "Impersonation" // User
+	// User is evading a ban
+	ReportReasonBanEvasion ReportReason = "BanEvasion" // User
+	// User is not of minimum age to use the platform
+	ReportReasonUnderage ReportReason = "Underage" // User
 )
 
 type ReportContent struct {
@@ -1800,8 +1863,8 @@ type ReportContent struct {
 
 type Report struct {
 	Status          ReportStatus `json:"status"`
-	RejectionReason string       `json:"rejection_reason"`
-	ClosedAt        *time.Time   `json:"closed_at"`
+	RejectionReason string       `json:"rejection_reason,omitempty"`
+	ClosedAt        *Time        `json:"closed_at,omitempty"`
 	// Unique ID
 	ID ULID `json:"_id"`
 	// ID of the user creating this report
@@ -1845,7 +1908,7 @@ type SnapshotContent struct {
 	// [Message]
 	Attachments []*AutumnFile `json:"attachments"`
 	// [Message]
-	Edited *time.Time `json:"edited"`
+	Edited *Time `json:"edited"`
 	// [Message] Attached embeds to this message
 	Embeds []*Embed `json:"embeds"`
 	// [Message] Array of user IDs mentioned in this message
@@ -1987,14 +2050,15 @@ func (sc *SnapshotContent) ToUser() *User {
 
 type Snapshot struct {
 	// Users involved in snapshot
-	Users []*User `json:"_users"`
+	Users []*User `json:"_users,omitempty"`
 	// Channels involved in snapshot
-	Channels []*Channel `json:"_channels"`
-	Server   *Server    `json:"_server"`
+	Channels []*Channel `json:"_channels,omitempty"`
+	// Server involved in snapshot
+	Server *Server `json:"_server,omitempty"`
 	// Unique ID
 	ID ULID `json:"_id"`
 	// Report parent ID
-	ReportID ULID `json:"report_id"`
+	ReportID ULID `json:"report_id,omitempty"`
 	// Enum to map into different models that can be saved in a snapshot
 	Content *SnapshotContent `json:"content"`
 }

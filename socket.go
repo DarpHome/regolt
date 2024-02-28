@@ -2,8 +2,11 @@ package regolt
 
 import (
 	"encoding/json"
+	"log/slog"
+	"math"
 	"net/http"
 	"net/url"
+	"os"
 	"slices"
 	"sync"
 	"time"
@@ -106,6 +109,21 @@ type ChannelUpdate struct {
 	Clear []string `json:"clear"`
 }
 
+// Whether description was cleared.
+func (cu *ChannelUpdate) IsDescriptionCleared() bool {
+	return slices.Contains(cu.Clear, "Description")
+}
+
+// Whether icon was removed.
+func (cu *ChannelUpdate) IsIconRemoved() bool {
+	return slices.Contains(cu.Clear, "Icon")
+}
+
+// Whether default permissions were removed.
+func (cu *ChannelUpdate) IsDefaultPermissionsWereRemoved() bool {
+	return slices.Contains(cu.Clear, "DefaultPermissions")
+}
+
 // Channel has been deleted.
 type ChannelDelete struct {
 	ChannelID ULID `json:"id"`
@@ -162,6 +180,31 @@ type ServerUpdate struct {
 	Clear []string `json:"clear"`
 }
 
+// Whether description was cleared.
+func (su *ServerUpdate) IsDescriptionCleared() bool {
+	return slices.Contains(su.Clear, "Description")
+}
+
+// Whether categories were removed.
+func (su *ServerUpdate) IsCategoriesWereRemoved() bool {
+	return slices.Contains(su.Clear, "Categories")
+}
+
+// Whether icon was removed.
+func (su *ServerUpdate) IsIconRemoved() bool {
+	return slices.Contains(su.Clear, "Icon")
+}
+
+// Whether banner was removed.
+func (su *ServerUpdate) IsBannerRemoved() bool {
+	return slices.Contains(su.Clear, "Banner")
+}
+
+// Whether system messages were removed.
+func (su *ServerUpdate) IsSystemMessagesWereRemoved() bool {
+	return slices.Contains(su.Clear, "SystemMessages")
+}
+
 // Server has been deleted.
 type ServerDelete struct {
 	ServerID ULID `json:"id"`
@@ -173,6 +216,26 @@ type ServerMemberUpdate struct {
 	Data *PartialMember `json:"data"`
 	// Possible values: ["Nickname", "Avatar", "Roles", "Timeout"]
 	Clear []string `json:"clear"`
+}
+
+// Whether nickname was removed.
+func (smu *ServerMemberUpdate) IsNicknameRemoved() bool {
+	return slices.Contains(smu.Clear, "Nickname")
+}
+
+// Whether avatar was removed.
+func (smu *ServerMemberUpdate) IsAvatarRemoved() bool {
+	return slices.Contains(smu.Clear, "Avatar")
+}
+
+// Whether roles were cleared.
+func (smu *ServerMemberUpdate) IsRolesWereCleared() bool {
+	return slices.Contains(smu.Clear, "Roles")
+}
+
+// Whether timeout was removed.
+func (smu *ServerMemberUpdate) IsTimeoutRemoved() bool {
+	return slices.Contains(smu.Clear, "Timeout")
 }
 
 // A user has joined the server.
@@ -197,6 +260,11 @@ type ServerRoleUpdate struct {
 	IsCreated bool     `json:"-"`
 }
 
+// Whether colour was removed.
+func (sru *ServerRoleUpdate) IsColourRemoved() bool {
+	return slices.Contains(sru.Clear, "Colour")
+}
+
 // Server role has been deleted.
 type ServerRoleDelete struct {
 	ServerID ULID `json:"id"`
@@ -212,11 +280,46 @@ type UserUpdate struct {
 	EventID ULID     `json:"event_id"`
 }
 
+// Whether avatar was removed.
+func (uu *UserUpdate) IsAvatarRemoved() bool {
+	return slices.Contains(uu.Clear, "Avatar")
+}
+
+// Whether status text was removed.
+func (uu *UserUpdate) IsStatusTextRemoved() bool {
+	return slices.Contains(uu.Clear, "StatusText")
+}
+
+// Whether status presence was removed.
+func (uu *UserUpdate) IsStatusPresenceRemoved() bool {
+	return slices.Contains(uu.Clear, "StatusPresence")
+}
+
+// Whether profile content was removed.
+func (uu *UserUpdate) IsProfileContentRemoved() bool {
+	return slices.Contains(uu.Clear, "ProfileContent")
+}
+
+// Whether profile background was removed.
+func (uu *UserUpdate) IsProfileBackgroundRemoved() bool {
+	return slices.Contains(uu.Clear, "ProfileBackground")
+}
+
+// Whether display name was removed.
+func (uu *UserUpdate) IsDisplayNameRemoved() bool {
+	return slices.Contains(uu.Clear, "Display")
+}
+
 // Your relationship with another user has changed.
 type UserRelationship struct {
-	ID     ULID               `json:"id"`
-	User   *User              `json:"user"`
-	Status RelationshipStatus `json:"status"`
+	ID   ULID  `json:"id"`
+	User *User `json:"user"`
+	// deprecated
+	// Status RelationshipStatus `json:"status"`
+}
+
+func (ur *UserRelationship) Status() RelationshipStatus {
+	return ur.User.Relationship
 }
 
 // Settings were updated remotely
@@ -250,6 +353,11 @@ type WebhookUpdate struct {
 	Remove []string `json:"remove"`
 }
 
+// Whether avatar was removed.
+func (wu *WebhookUpdate) IsAvatarRemoved() bool {
+	return slices.Contains(wu.Remove, "Avatar")
+}
+
 // Webhook has been deleted.
 type WebhookDelete struct {
 	ID ULID `json:"id"`
@@ -258,16 +366,147 @@ type WebhookDelete struct {
 type AuthEventType string
 
 const (
+	AuthEventTypeCreateAccount     AuthEventType = "CreateAccount"
+	AuthEventTypeCreateSession     AuthEventType = "CreateSession"
 	AuthEventTypeDeleteSession     AuthEventType = "DeleteSession"
 	AuthEventTypeDeleteAllSessions AuthEventType = "DeleteAllSessions"
 )
 
+type EmailVerificationStatus string
+
+const (
+	// Account is verified
+	EmailVerificationStatusVerified EmailVerificationStatus = "Verified"
+	// Pending email verification
+	EmailVerificationStatusPending EmailVerificationStatus = "Pending"
+	// Moving to a new email
+	EmailVerificationStatusMoving EmailVerificationStatus = "Moving"
+)
+
+// Email verification status
+type EmailVerification struct {
+	Status EmailVerificationStatus `json:"status"`
+	// [Present only on Moving] New email
+	NewEmail string `json:"new_email,omitempty"`
+	// [Present only on Pending/Moving] New token
+	Token string `json:"token,omitempty"`
+	// [Present only on Pending/Moving] Time at which this token expires
+	Expiry *Time `json:"expiry,omitempty"`
+}
+
+// Password reset information
+type PasswordReset struct {
+	// Token required to change password
+	Token string `json:"token"`
+	// Time at which this token expires
+	Expiry *Time `json:"expiry,omitempty"`
+}
+
+type DeletionInfoStatus string
+
+const (
+	// The user must confirm deletion by email
+	DeletionInfoStatusWaitingForVerification DeletionInfoStatus = "WaitingForVerification"
+	// The account is scheduled for deletion
+	DeletionInfoStatusScheduled DeletionInfoStatus = "Scheduled"
+	// This account was deleted
+	DeletionInfoStatusDeleted DeletionInfoStatus = "Deleted"
+)
+
+// Account deletion information
+type DeletionInfo struct {
+	Token  string `json:"token,omitempty"`
+	Expiry *Time  `json:"expiry,omitempty"`
+	After  *Time  `json:"after,omitempty"`
+}
+
+// Lockout information
+type Lockout struct {
+	// Attempt counter
+	Attempts int `json:"attempts"`
+	// Time at which this lockout expires
+	Expiry *Time `json:"expiry"`
+}
+
+type TOTPStatus string
+
+const (
+	// Disabled
+	TOTPStatusDisabled TOTPStatus = "Disabled"
+	// Waiting for user activation
+	TOTPStatusPending TOTPStatus = "Pending"
+	// Required on account
+	TOTPStatusEnabled TOTPStatus = "Enabled"
+)
+
+// Time-based one-time password configuration
+type TOTP struct {
+	Status TOTPStatus `json:"status"`
+	// [Present only on Pending/Enabled]
+	Secret string `json:"secret,omitempty"`
+}
+
+// MFA configuration
+type MultiFactorAuthentication struct {
+	// TOTP MFA token, enabled if present
+	// (2-Factor)
+	TOTPToken *TOTP `json:"totp_token,omitempty"`
+	// Recovery codes
+	RecoveryCodes []string `json:"recovery_codes,omitempty"`
+}
+
+// Account model
+type SocketAccount struct {
+	// Unique ID
+	ID string `json:"_id"`
+	// User's email
+	Email string `json:"email"`
+	// Normalised email
+	//
+	// (see https://github.com/insertish/authifier/#how-does-authifier-work)
+	EmailNormalised string `json:"email_normalised"`
+	// Argon2 hashed password
+	Password string `json:"password"`
+	// Whether the account is disabled
+	Disabled bool `json:"disabled"`
+	// Email verification status
+	Verification *EmailVerification `json:"verification"`
+	// Password reset information
+	PasswordReset *PasswordReset `json:"password_reset"`
+	// Account deletion information
+	Deletion *DeletionInfo `json:"deletion"`
+	// Account lockout
+	Lockout *Lockout `json:"lockout"`
+	// Multi-factor authentication information
+	MFA *MultiFactorAuthentication `json:"mfa"`
+}
+
+type SocketSession struct {
+	// Unique ID
+	ID string `json:"_id"`
+	// User ID
+	UserID string `json:"user_id"`
+	// Session token
+	Token string `json:"token"`
+	// Display name
+	Name string `json:"name"`
+	// Web Push subscription
+	Subscription *WebPushSubscription `json:"subscription,omitempty"`
+}
+
 // Forwarded events from rAuth, currently only session deletion events are forwarded.
 type Auth struct {
-	EventType        AuthEventType `json:"event_type"`
-	UserID           ULID          `json:"user_id"`
-	SessionID        string        `json:"session_id"`
-	ExcludeSessionID string        `json:"exclude_session_id"`
+	EventType AuthEventType `json:"event_type"`
+	// [Present only on CreateAccount]
+	Account *SocketAccount `json:"account,omitempty"`
+	// [Present only on CreateSession]
+	Session *SocketSession `json:"session,omitempty"`
+	// [Present only on DeleteSession/DeleteAllSessions]
+	UserID ULID `json:"user_id,omitempty"`
+	// [Present only on DeleteSession]
+	SessionID string `json:"session_id,omitempty"`
+	// [Present only on DeleteAllSessions]
+	ExcludeSessionID string `json:"exclude_session_id,omitempty"`
 }
 
 type Events struct {
@@ -375,6 +614,22 @@ type Socket struct {
 	closeEvent  chan struct{}
 	mu          sync.Mutex
 	Cache       *GenericCache
+	Logger      *slog.Logger
+}
+
+func (socket *Socket) Latency() time.Duration {
+	if socket.lastPingReq.IsZero() || socket.lastPingRes.IsZero() {
+		return 0
+	}
+	return socket.lastPingRes.Sub(socket.lastPingReq)
+}
+
+func (socket *Socket) LatencyMs() float64 {
+	l := socket.Latency()
+	if l == 0 {
+		return math.NaN()
+	}
+	return float64(l/time.Millisecond) / 1000
 }
 
 func (socket *Socket) Close() error {
@@ -565,9 +820,13 @@ func (socket *Socket) init() {
 }
 
 type SocketConfig struct {
-	Cache  *GenericCache
-	Dialer WebsocketDialer
-	URL    *url.URL
+	Cache          *GenericCache
+	Dialer         WebsocketDialer
+	URL            *url.URL
+	AddLogSource   bool
+	Logger         *slog.Logger
+	DisableLogging bool
+	LoggerLevel    slog.Leveler
 }
 
 func NewSocket(token string, config *SocketConfig) (socket *Socket, err error) {
@@ -589,15 +848,51 @@ func NewSocket(token string, config *SocketConfig) (socket *Socket, err error) {
 	if cache == nil {
 		cache = &GenericCache{}
 	}
+	logger := config.Logger
+	if logger == nil && !config.DisableLogging {
+		level := config.LoggerLevel
+		if level == nil {
+			level = slog.LevelInfo
+		}
+		logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			AddSource: config.AddLogSource,
+			Level:     level,
+		}).WithGroup("regolt"))
+	}
 	socket = &Socket{
 		Token:      token,
 		Dialer:     d,
 		closeEvent: make(chan struct{}),
 		URL:        wsUrl,
 		Cache:      cache,
+		Logger:     logger,
 	}
 	socket.init()
 	return
+}
+
+func (s *Socket) logDebug(msg string, args ...any) {
+	if s.Logger != nil {
+		s.Logger.Debug(msg, args...)
+	}
+}
+
+func (s *Socket) logInfo(msg string, args ...any) {
+	if s.Logger != nil {
+		s.Logger.Info(msg, args...)
+	}
+}
+
+func (s *Socket) logError(msg string, args ...any) {
+	if s.Logger != nil {
+		s.Logger.Error(msg, args...)
+	}
+}
+
+func (s *Socket) logWarn(msg string, args ...any) {
+	if s.Logger != nil {
+		s.Logger.Warn(msg, args...)
+	}
 }
 
 type SocketError struct {
@@ -626,19 +921,25 @@ func (se SocketError) Error() string {
 
 func (socket *Socket) Connect() error {
 	conn, _, err := socket.Dialer.Dial(socket.URL.String(), http.Header{})
+	socket.logInfo("connected to websocket")
 	if err != nil {
 		return err
 	}
-	conn.SetCloseHandler(func(code int, text string) error {
+	conn.SetCloseHandler(func(code int, message string) error {
+		socket.logDebug("received close message with code/message", slog.Int("code", code), slog.String("message", message))
 		if socket.closed {
+			socket.logDebug("socket was closed, returning")
 			return nil
 		}
+		socket.logDebug("closing socket internals")
 		if err := socket.close(); err != nil {
+			socket.logError("caught an error when closing", slog.Any("err", err))
 			return err
 		}
 		// reinitialize
 		socket.lastPingReq = time.Time{}
 		socket.lastPingRes = time.Time{}
+		socket.logDebug("reopening")
 		return socket.Open()
 	})
 	socket.Connection = conn
@@ -671,11 +972,11 @@ func (socket *Socket) Ping() error {
 }
 
 func (socket *Socket) emitError(err error) {
+	socket.logError("caught an error", slog.Any("err", err))
 	socket.Events.Error.EmitInGoroutines(err)
 }
 
 func (socket *Socket) pinger() {
-
 	for {
 		select {
 		case <-socket.closeEvent:
@@ -714,6 +1015,7 @@ func (socket *Socket) Open() (err error) {
 		errorEvent <- err
 	})
 	defer sub3.Delete()
+	socket.logInfo("authenticating")
 	err = socket.Authenticate()
 	if err != nil {
 		return
@@ -723,20 +1025,22 @@ func (socket *Socket) Open() (err error) {
 	case err = <-errorEvent:
 		return
 	case <-readyEvent:
+		socket.logInfo("ready")
 	}
 	return
 }
 
 func (socket *Socket) process(s []byte) {
+	socket.logDebug("processing", slog.String("payload", string(s)))
 	var a map[string]any
 	if err := json.Unmarshal(s, &a); err != nil {
 		return
 	}
 	socket.Events.Raw.EmitInGoroutines(a)
 	typ := a["type"].(string)
+	socket.logDebug("received", slog.String("type", typ))
 	switch typ {
 	case "Error":
-		println("asdsad")
 		socket.Events.RevoltError.Emit(a["error"].(string))
 	case "NotFound":
 		socket.Events.RevoltError.Emit("InvalidSession")
@@ -920,13 +1224,13 @@ func (socket *Socket) process(s []byte) {
 				if len(r.Data.Owner) != 0 {
 					c.Owner = r.Data.Owner
 				}
-				if slices.Contains(r.Clear, "Description") {
+				if r.IsDescriptionCleared() {
 					c.Description = ""
 				}
-				if slices.Contains(r.Clear, "Icon") {
+				if r.IsIconRemoved() {
 					c.Icon = nil
 				}
-				if slices.Contains(r.Clear, "DefaultPermissions") {
+				if r.IsDefaultPermissionsWereRemoved() {
 					c.DefaultPermissions = nil
 				}
 			})
@@ -1015,19 +1319,19 @@ func (socket *Socket) process(s []byte) {
 						s.Flags &= ^OptimizedServerFlagsNSFW
 					}
 				}
-				if slices.Contains(r.Clear, "Description") {
+				if r.IsDescriptionCleared() {
 					s.Description = ""
 				}
-				if slices.Contains(r.Clear, "Categories") {
+				if r.IsCategoriesWereRemoved() {
 					s.Categories = []*Category{}
 				}
-				if slices.Contains(r.Clear, "SystemMessages") {
+				if r.IsSystemMessagesWereRemoved() {
 					s.SystemMessages = nil
 				}
-				if slices.Contains(r.Clear, "Icon") {
+				if r.IsIconRemoved() {
 					s.Icon = nil
 				}
-				if slices.Contains(r.Clear, "Banner") {
+				if r.IsBannerRemoved() {
 					s.Banner = nil
 				}
 			})
@@ -1105,7 +1409,7 @@ func (socket *Socket) process(s []byte) {
 					if r.Data.Rank != nil {
 						o.Rank = *r.Data.Rank
 					}
-					if slices.Contains(r.Clear, "Colour") {
+					if r.IsColourRemoved() {
 						o.Colour = ""
 					}
 				})
@@ -1169,23 +1473,23 @@ func (socket *Socket) process(s []byte) {
 				if r.Data.Relationship != nil {
 					u.Relationship = (*r.Data.Relationship).ToOptimized()
 				}
-				if slices.Contains(r.Clear, "Avatar") {
+				if r.IsAvatarRemoved() {
 					u.Avatar = nil
 				}
-				if slices.Contains(r.Clear, "StatusText") && u.Status != nil {
+				if r.IsStatusTextRemoved() && u.Status != nil {
 					u.Status.Text = ""
 				}
-				if slices.Contains(r.Clear, "StatusPresence") && u.Status != nil {
+				if r.IsStatusPresenceRemoved() && u.Status != nil {
 					u.Status.Presence = OptimizedPresenceInvisible
 				}
 
-				if slices.Contains(r.Clear, "ProfileContent") && u.Profile != nil {
+				if r.IsProfileContentRemoved() && u.Profile != nil {
 					u.Profile.Content = ""
 				}
-				if slices.Contains(r.Clear, "ProfileBackground") && u.Profile != nil {
+				if r.IsProfileBackgroundRemoved() && u.Profile != nil {
 					u.Profile.Background = nil
 				}
-				if slices.Contains(r.Clear, "DisplayName") {
+				if r.IsDisplayNameRemoved() {
 					u.DisplayName = ""
 				}
 			})
@@ -1198,7 +1502,7 @@ func (socket *Socket) process(s []byte) {
 		}
 		socket.Events.UserRelationship.EmitAndCall(t, func(r UserRelationship) {
 			socket.Cache.Users.PartiallyUpdate(t.ID, func(u *OptimizedUser) {
-				u.Relationship = r.Status.ToOptimized()
+				u.Relationship = r.Status().ToOptimized()
 			})
 		})
 	case "UserSettingsUpdate":
@@ -1259,7 +1563,7 @@ func (socket *Socket) process(s []byte) {
 				if r.Data.Permissions != nil {
 					w.Permissions = *r.Data.Permissions
 				}
-				if slices.Contains(r.Remove, "Avatar") {
+				if r.IsAvatarRemoved() {
 					w.Avatar = nil
 				}
 			})
@@ -1287,6 +1591,8 @@ func (socket *Socket) process(s []byte) {
 			return
 		}
 		socket.Events.Auth.EmitInGoroutines(t)
+	default:
+		socket.logWarn("unknown event received", slog.String("type", typ), slog.String("payload", string(s)))
 	}
 }
 
@@ -1297,6 +1603,7 @@ func (socket *Socket) listener() {
 		}
 		m, p, err := socket.Connection.ReadMessage()
 		if err != nil {
+			socket.logError("caught an error when reading message", slog.Any("err", err))
 			if _, ok := err.(*websocket.CloseError); ok {
 				if err = socket.Open(); err != nil {
 					socket.Events.Error.Emit(err)

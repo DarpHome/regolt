@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type Route struct {
@@ -527,37 +526,46 @@ func (h DefaultHTTPClient) Perform(req *http.Request) (*http.Response, error) {
 	return h.Client.Do(req)
 }
 
+// Type of Revolt token.
 type TokenType int
 
 const (
+	// User token
 	TokenTypeUser TokenType = iota
+	// Bot token
 	TokenTypeBot
 )
 
 type Token struct {
-	Type  TokenType
+	Type TokenType
+	// The token string
 	Token string
 }
 
+// NewUserToken returns an Token with type "TokenTypeUser" set
 func NewUserToken(token string) *Token {
 	return &Token{Type: TokenTypeUser, Token: token}
 }
 
+// NewBotToken returns an Token with type "TokenTypeBot" set
 func NewBotToken(token string) *Token {
 	return &Token{Type: TokenTypeBot, Token: token}
 }
 
+// Requester for Autumn API
 type AutumnAPI struct {
 	Token      *Token
 	HTTPClient HTTPClient
 	URL        *url.URL
 }
 
+// Requester config
 type AutumnAPIConfig struct {
 	HTTPClient HTTPClient
 	URL        *url.URL
 }
 
+// NewAutumnAPI returns an AutumnAPI which can be used to upload and get files
 func NewAutumnAPI(token *Token, config *AutumnAPIConfig) (api *AutumnAPI, err error) {
 	if config == nil {
 		config = &AutumnAPIConfig{}
@@ -1056,6 +1064,41 @@ type EditUser struct {
 	Remove []string
 }
 
+func (eu *EditUser) remove(x string) *EditUser {
+	eu.Remove = append(eu.Remove, x)
+	return eu
+}
+
+// Indicate that we will remove avatar.
+func (eu *EditUser) RemoveAvatar() *EditUser {
+	return eu.remove("Avatar")
+}
+
+// Indicate that we will remove status text.
+func (eu *EditUser) RemoveStatusText() *EditUser {
+	return eu.remove("StatusText")
+}
+
+// Indicate that we will remove status presence.
+func (eu *EditUser) RemoveStatusPresence() *EditUser {
+	return eu.remove("StatusPresence")
+}
+
+// Indicate that we will remove profile content.
+func (eu *EditUser) RemoveProfileContent() *EditUser {
+	return eu.remove("ProfileContent")
+}
+
+// Indicate that we will remove profile background.
+func (eu *EditUser) RemoveProfileBackground() *EditUser {
+	return eu.remove("ProfileBackground")
+}
+
+// Indicate that we will remove display name.
+func (eu *EditUser) RemoveDisplayName() *EditUser {
+	return eu.remove("DisplayName")
+}
+
 func (eu EditUser) MarshalJSON() ([]byte, error) {
 	r := map[string]any{}
 	if eu.DisplayName != nil {
@@ -1284,41 +1327,32 @@ func (api *API) DeleteBot(bot ULID) error {
 
 type EditBot struct {
 	// Bot username
-	Name string
+	Name string `json:"name,omitempty"`
 	// Whether the bot can be added by anyone
-	Public *bool
+	Public *bool `json:"public,omitempty"`
 	// Whether analytics should be gathered for this bot
 	// Must be enabled in order to show up on Revolt Discover.
-	Analytics *bool
+	Analytics *bool `json:"analytics,omitempty"`
 	// Interactions URL
-	InteractionsURL *string
+	InteractionsURL *string `json:"interactions_url,omitempty"`
 	// Fields to remove from bot object
 	// Possible values: ["Token", "InteractionsURL"]
-	Remove []string
+	Remove []string `json:"remove,omitempty"`
 }
 
-func (eb EditBot) MarshalJSON() ([]byte, error) {
-	r := map[string]any{}
-	if len(eb.Name) != 0 {
-		r["name"] = eb.Name
-	}
-	if eb.Public != nil {
-		r["public"] = eb.Public
-	}
-	if eb.Analytics != nil {
-		r["analytics"] = eb.Analytics
-	}
-	if eb.InteractionsURL != nil {
-		if len(*eb.InteractionsURL) == 0 {
-			r["interactions_url"] = nil
-		} else {
-			r["interactions_url"] = *eb.InteractionsURL
-		}
-	}
-	if len(eb.Remove) > 0 {
-		r["remove"] = eb.Remove
-	}
-	return json.Marshal(r)
+func (eb *EditBot) remove(x string) *EditBot {
+	eb.Remove = append(eb.Remove, x)
+	return eb
+}
+
+// Indicate that we will remove token.
+func (eb *EditBot) RemoveToken() *EditBot {
+	return eb.remove("Token")
+}
+
+// Indicate that we will remove interactions URL.
+func (eb *EditBot) RemoveInteractionsURL() *EditBot {
+	return eb.remove("InteractionsURL")
 }
 
 // Edit bot details by its ID.
@@ -1351,54 +1385,40 @@ func (api *API) CloseChannel(channel ULID, leaveSilently *bool) error {
 
 type EditChannel struct {
 	// Channel name
-	Name string
+	Name string `json:"name,omitempty"`
 	// Channel description
-	Description *string
+	Description *string `json:"description,omitempty"`
 	// Group owner
-	Owner ULID
+	Owner ULID `json:"owner,omitempty"`
 	// Icon to set. Provide an Autumn attachment ID.
-	Icon *string
+	Icon *string `json:"icon,omitempty"`
 	// Whether this channel is age-restricted
-	NSFW *bool
+	NSFW *bool `json:"nsfw,omitempty"`
 	// Whether this channel is archived
-	Archived *bool
+	Archived *bool `json:"archived,omitempty"`
 	// Fields to remove from channel object
 	// Possible values: ["Description", "Icon", "DefaultPermissions"]
-	Remove []string
+	Remove []string `json:"remove,omitempty"`
 }
 
-func (ec EditChannel) MarshalJSON() ([]byte, error) {
-	r := map[string]any{}
-	if len(ec.Name) != 0 {
-		r["name"] = ec.Name
-	}
-	if ec.Description != nil {
-		if len(*ec.Description) == 0 {
-			r["description"] = nil
-		} else {
-			r["description"] = ec.Description
-		}
-	}
-	if len(ec.Owner) != 0 {
-		r["owner"] = ec.Owner
-	}
-	if ec.Icon != nil {
-		if len(*ec.Icon) == 0 {
-			r["icon"] = nil
-		} else {
-			r["icon"] = *ec.Icon
-		}
-	}
-	if ec.NSFW != nil {
-		r["nsfw"] = *ec.NSFW
-	}
-	if ec.Archived != nil {
-		r["archived"] = *ec.Archived
-	}
-	if len(ec.Remove) > 0 {
-		r["remove"] = ec.Remove
-	}
-	return json.Marshal(r)
+func (ec *EditChannel) remove(x string) *EditChannel {
+	ec.Remove = append(ec.Remove, x)
+	return ec
+}
+
+// Indicate that we will remove description.
+func (ec *EditChannel) RemoveDescription() *EditChannel {
+	return ec.remove("Description")
+}
+
+// Indicate that we will remove icon.
+func (ec *EditChannel) RemoveIcon() *EditChannel {
+	return ec.remove("Icon")
+}
+
+// Indicate that we will remove default permissions.
+func (ec *EditChannel) RemoveDefaultPermissions() *EditChannel {
+	return ec.remove("DefaultPermissions")
 }
 
 // Edit a channel object by its id.
@@ -1562,12 +1582,17 @@ type Reply struct {
 }
 
 type SendableEmbed struct {
-	IconURL     string `json:"icon_url,omitempty"`
-	URL         string `json:"url,omitempty"`
-	Title       string `json:"title,omitempty"`
+	IconURL string `json:"icon_url,omitempty"`
+	// URL in embed title
+	URL string `json:"url,omitempty"`
+	// Embed title
+	Title string `json:"title,omitempty"`
+	// Embed description
 	Description string `json:"description,omitempty"`
-	Media       string `json:"media,omitempty"`
-	Colour      string `json:"colour,omitempty"`
+	// Embed media
+	Media string `json:"media,omitempty"`
+	// Embed colour. This can be any valid CSS colour.
+	Colour string `json:"colour,omitempty"`
 }
 
 type SendMessage struct {
@@ -1879,6 +1904,16 @@ type EditWebhook struct {
 	Remove []string `json:"remove,omitempty"`
 }
 
+func (ew *EditWebhook) remove(x string) *EditWebhook {
+	ew.Remove = append(ew.Remove, x)
+	return ew
+}
+
+// Indicate that we will remove avatar.
+func (ew *EditWebhook) RemoveAvatar() *EditWebhook {
+	return ew.remove("Avatar")
+}
+
 // Edits a webhook [with a token].
 // webhook [required] - The webhook ID
 // webhookToken [optional, pass empty] - The webhook private token.
@@ -2034,27 +2069,27 @@ func (esm EditSystemMessages) MarshalJSON() ([]byte, error) {
 
 type EditServer struct {
 	// Server name
-	Name string
+	Name string `json:"name,omitempty"`
 	// Server description
-	Description *string
+	Description *string `json:"description,omitempty"`
 	// Attachment ID for icon
-	Icon *string
+	Icon *string `json:"icon,omitempty"`
 	// Attachment ID for banner
-	Banner *string
+	Banner *string `json:"banner,omitempty"`
 	// Category structure for server
-	Categories *[]Category
+	Categories *[]Category `json:"categories,omitempty"`
 	// System message channel assignments
-	SystemMessages *EditSystemMessages
+	SystemMessages *EditSystemMessages `json:"system_messages,omitempty"`
 	// Bitfield of server flags
-	Flags ServerFlags
+	Flags ServerFlags `json:"flags,omitempty"`
 	// Whether this server is public and should show up on Revolt Discover
-	Discoverable *bool
+	Discoverable *bool `json:"discoverable,omitempty"`
 	// Whether analytics should be collected for this server
 	// Must be enabled in order to show up on Revolt Discover.
-	Analytics *bool
+	Analytics *bool `json:"analytics,omitempty"`
 	// Fields to remove from server object
 	// Possible values: ["Description", "Categories", "SystemMessages", "Icon", "Banner"]
-	Remove []string
+	Remove []string `json:"remove,omitempty"`
 }
 
 func (es *EditServer) SetName(name string) *EditServer {
@@ -2119,51 +2154,34 @@ func (es *EditServer) SetFlags(flags ServerFlags) *EditServer {
 	return es
 }
 
-func (es EditServer) MarshalJSON() ([]byte, error) {
-	r := map[string]any{}
-	if len(es.Name) != 0 {
-		r["name"] = es.Name
-	}
-	if es.Description != nil {
-		if len(*es.Description) == 0 {
-			r["description"] = nil
-		} else {
-			r["description"] = *es.Description
-		}
-	}
-	if es.Icon != nil {
-		if len(*es.Icon) == 0 {
-			r["icon"] = nil
-		} else {
-			r["icon"] = *es.Icon
-		}
-	}
-	if es.Banner != nil {
-		if len(*es.Banner) == 0 {
-			r["banner"] = nil
-		} else {
-			r["banner"] = *es.Banner
-		}
-	}
-	if es.Categories != nil {
-		r["categories"] = *es.Categories
-	}
-	if es.SystemMessages != nil {
-		r["system_messages"] = es.SystemMessages
-	}
-	if es.Flags != 0 {
-		r["flags"] = es.Flags
-	}
-	if es.Discoverable != nil {
-		r["discoverable"] = *es.Discoverable
-	}
-	if es.Analytics != nil {
-		r["analytics"] = *es.Analytics
-	}
-	if len(es.Remove) > 0 {
-		r["remove"] = es.Remove
-	}
-	return json.Marshal(r)
+func (es *EditServer) remove(x string) *EditServer {
+	es.Remove = append(es.Remove, x)
+	return es
+}
+
+// Indicate that we will remove description.
+func (es *EditServer) RemoveDescription() *EditServer {
+	return es.remove("Description")
+}
+
+// Indicate that we will remove categories.
+func (es *EditServer) RemoveCategories() *EditServer {
+	return es.remove("Categories")
+}
+
+// Indicate that we will remove system messages.
+func (es *EditServer) RemoveSystemMessages() *EditServer {
+	return es.remove("SystemMessages")
+}
+
+// Indicate that we will remove icon.
+func (es *EditServer) RemoveIcon() *EditServer {
+	return es.remove("Icon")
+}
+
+// Indicate that we will remove banner.
+func (es *EditServer) RemoveBanner() *EditServer {
+	return es.remove("Banner")
 }
 
 // Edit a server by its ID.
@@ -2244,48 +2262,41 @@ func (api *API) KickMember(server, member ULID) error {
 
 type EditMember struct {
 	// Member nickname
-	Nickname *string
+	Nickname string `json:"nickname,omitempty"`
 	// Attachment ID to set for avatar
-	Avatar *string
+	Avatar string `json:"avatar,omitempty"`
 	// Array of role IDs
-	Roles *[]ULID
+	Roles *[]ULID `json:"roles,omitempty"`
 	// ISO8601 formatted timestamp
-	Timeout *time.Time
+	Timeout *Time `json:"timeout,omitempty"`
 	// Fields to remove from member object
 	// Possible values: ["Nickname", "Avatar", "Roles", "Timeout"]
-	Remove []string
+	Remove []string `json:"remove,omitempty"`
 }
 
-func (em EditMember) MarshalJSON() ([]byte, error) {
-	r := map[string]any{}
-	if em.Nickname != nil {
-		if len(*em.Nickname) == 0 {
-			r["nickname"] = nil
-		} else {
-			r["nickname"] = *em.Nickname
-		}
-	}
-	if em.Avatar != nil {
-		if len(*em.Avatar) == 0 {
-			r["avatar"] = nil
-		} else {
-			r["avatar"] = *em.Avatar
-		}
-	}
-	if em.Roles != nil {
-		r["roles"] = *em.Roles
-	}
-	if em.Timeout != nil {
-		if em.Timeout.IsZero() {
-			r["timeout"] = nil
-		} else {
-			r["timeout"] = em.Timeout.Format(iso8601Template)
-		}
-	}
-	if len(em.Remove) > 0 {
-		r["remove"] = em.Remove
-	}
-	return json.Marshal(r)
+func (em *EditMember) remove(x string) *EditMember {
+	em.Remove = append(em.Remove, x)
+	return em
+}
+
+// Indicate that we will remove nickname.
+func (em *EditMember) RemoveNickname() *EditMember {
+	return em.remove("Nickname")
+}
+
+// Indicate that we will remove avatar.
+func (em *EditMember) RemoveAvatar() *EditMember {
+	return em.remove("Avatar")
+}
+
+// Indicate that we will remove roles.
+func (em *EditMember) RemoveRoles() *EditMember {
+	return em.remove("Roles")
+}
+
+// Indicate that we will remove timeout.
+func (em *EditMember) RemoveTimeout() *EditMember {
+	return em.remove("Timeout")
 }
 
 // Edit a member by their ID.
@@ -2399,6 +2410,16 @@ type EditRole struct {
 	// Fields to remove from role object
 	// Possible values: ["Colour"]
 	Remove []string `json:"remove,omitempty"`
+}
+
+func (er *EditRole) remove(x string) *EditRole {
+	er.Remove = append(er.Remove, x)
+	return er
+}
+
+// Indicate that we will remove colour.
+func (er *EditRole) RemoveColour() *EditRole {
+	return er.remove("Colour")
 }
 
 // Edit a role by its ID.
@@ -2540,7 +2561,7 @@ func (api *API) GloballyFetchMessages(params *GloballyFetchMessages) (m *Message
 type EditReportStatus struct {
 	Status          ReportStatus `json:"status"`
 	RejectionReason string       `json:"rejection_reason,omitempty"`
-	ClosedAt        *time.Time   `json:"closed_at,omitempty"`
+	ClosedAt        *Time        `json:"closed_at,omitempty"`
 }
 
 type EditReport struct {

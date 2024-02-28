@@ -11,8 +11,12 @@ type Emoji struct {
 	Emoji string
 }
 
-func NewUnicodeEmoji(emoji string) Emoji {
-	return Emoji{Emoji: emoji}
+func NewUnicodeEmoji(emoji string) *Emoji {
+	return &Emoji{Emoji: emoji}
+}
+
+func NewCustomEmoji(emoji ULID) *Emoji {
+	return &Emoji{ID: emoji}
 }
 
 func (e Emoji) EncodeFP() string {
