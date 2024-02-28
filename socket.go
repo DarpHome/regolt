@@ -615,6 +615,7 @@ type Socket struct {
 	mu          sync.Mutex
 	Cache       *GenericCache
 	Logger      *slog.Logger
+	Arshaler    JSONArshaler
 }
 
 func (socket *Socket) Latency() time.Duration {
@@ -827,6 +828,7 @@ type SocketConfig struct {
 	Logger         *slog.Logger
 	DisableLogging bool
 	LoggerLevel    slog.Leveler
+	Arshaler       JSONArshaler
 }
 
 func NewSocket(token string, config *SocketConfig) (socket *Socket, err error) {
@@ -859,6 +861,10 @@ func NewSocket(token string, config *SocketConfig) (socket *Socket, err error) {
 			Level:     level,
 		}).WithGroup("regolt"))
 	}
+	arshaler := config.Arshaler
+	if arshaler == nil {
+		arshaler = NewJSONArshaler(json.Marshal, json.Unmarshal)
+	}
 	socket = &Socket{
 		Token:      token,
 		Dialer:     d,
@@ -866,6 +872,7 @@ func NewSocket(token string, config *SocketConfig) (socket *Socket, err error) {
 		URL:        wsUrl,
 		Cache:      cache,
 		Logger:     logger,
+		Arshaler:   arshaler,
 	}
 	socket.init()
 	return
@@ -951,7 +958,11 @@ func (socket *Socket) Write(typ string, d map[string]any) error {
 	e["type"] = typ
 	socket.mu.Lock()
 	defer socket.mu.Unlock()
-	return socket.Connection.WriteJSON(e)
+	b, err := socket.marshal(e)
+	if err != nil {
+		return err
+	}
+	return socket.Connection.WriteMessage(websocket.TextMessage, b)
 }
 
 func (socket *Socket) Authenticate() error {
@@ -1030,6 +1041,26 @@ func (socket *Socket) Open() (err error) {
 	return
 }
 
+func (socket *Socket) marshal(v any) ([]byte, error) {
+	if socket.Arshaler != nil {
+		b, err := socket.Arshaler.Marshal(v)
+		if _, ok := err.(*ArshalNotImplemented); !ok {
+			return b, err
+		}
+	}
+	return json.Marshal(v)
+}
+
+func (socket *Socket) unmarshal(d []byte, v any) error {
+	if socket.Arshaler != nil {
+		err := socket.Arshaler.Unmarshal(d, v)
+		if _, ok := err.(*ArshalNotImplemented); !ok {
+			return err
+		}
+	}
+	return json.Unmarshal(d, v)
+}
+
 func (socket *Socket) process(s []byte) {
 	socket.logDebug("processing", slog.String("payload", string(s)))
 	var a map[string]any
@@ -1050,7 +1081,7 @@ func (socket *Socket) process(s []byte) {
 		t := struct {
 			V []json.RawMessage `json:"v"`
 		}{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1061,14 +1092,14 @@ func (socket *Socket) process(s []byte) {
 		t := struct {
 			Data int `json:"data"`
 		}{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.lastPingRes = time.Now()
 	case "Ready":
 		t := Ready{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1093,7 +1124,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "Message":
 		t := Message{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1102,7 +1133,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "MessageUpdate":
 		t := MessageUpdate{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1122,7 +1153,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "MessageAppend":
 		t := MessageAppend{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1139,7 +1170,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "MessageDelete":
 		t := MessageDelete{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1148,28 +1179,28 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "MessageReact":
 		t := MessageReact{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.MessageReact.EmitInGoroutines(t)
 	case "MessageUnreact":
 		t := MessageUnreact{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.MessageUnreact.EmitInGoroutines(t)
 	case "MessageRemoveReaction":
 		t := MessageRemoveReaction{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.MessageRemoveReaction.EmitInGoroutines(t)
 	case "BulkDeleteMessage":
 		t := BulkDeleteMessage{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1180,7 +1211,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "ChannelCreate":
 		t := Channel{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1189,7 +1220,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "ChannelUpdate":
 		t := ChannelUpdate{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1237,7 +1268,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "ChannelDelete":
 		t := ChannelDelete{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1246,42 +1277,42 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "ChannelGroupJoin":
 		t := ChannelGroupJoin{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.ChannelGroupJoin.EmitInGoroutines(t)
 	case "ChannelGroupLeave":
 		t := ChannelGroupLeave{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.ChannelGroupLeave.EmitInGoroutines(t)
 	case "ChannelStartTyping":
 		t := ChannelStartTyping{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.ChannelStartTyping.EmitInGoroutines(t)
 	case "ChannelStopTyping":
 		t := ChannelStopTyping{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.ChannelStopTyping.EmitInGoroutines(t)
 	case "ChannelAck":
 		t := ChannelAck{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.ChannelAck.EmitInGoroutines(t)
 	case "ServerCreate":
 		t := ServerCreate{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1296,7 +1327,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "ServerUpdate":
 		t := ServerUpdate{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1338,7 +1369,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "ServerDelete":
 		t := ServerDelete{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1348,28 +1379,28 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "ServerMemberUpdate":
 		t := ServerMemberUpdate{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.ServerMemberUpdate.EmitInGoroutines(t)
 	case "ServerMemberJoin":
 		t := ServerMemberJoin{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.ServerMemberJoin.EmitInGoroutines(t)
 	case "ServerMemberLeave":
 		t := ServerMemberLeave{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.ServerMemberLeave.EmitInGoroutines(t)
 	case "ServerRoleUpdate":
 		t := ServerRoleUpdate{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1417,7 +1448,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "ServerRoleDelete":
 		t := ServerRoleDelete{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1426,7 +1457,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "UserUpdate":
 		t := UserUpdate{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1496,7 +1527,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "UserRelationship":
 		t := UserRelationship{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1507,21 +1538,21 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "UserSettingsUpdate":
 		t := UserSettingsUpdate{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.UserSettingsUpdate.EmitInGoroutines(t)
 	case "UserPlatformWipe":
 		t := UserPlatformWipe{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.UserPlatformWipe.EmitInGoroutines(t)
 	case "EmojiCreate":
 		t := CustomEmoji{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1530,7 +1561,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "EmojiDelete":
 		t := EmojiDelete{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1539,7 +1570,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "WebhookCreate":
 		t := Webhook{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1548,7 +1579,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "WebhookUpdate":
 		t := WebhookUpdate{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1570,7 +1601,7 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "WebhookDelete":
 		t := WebhookDelete{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1579,14 +1610,14 @@ func (socket *Socket) process(s []byte) {
 		})
 	case "ReportCreate":
 		t := Report{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
 		socket.Events.ReportCreate.EmitInGoroutines(t)
 	case "Auth":
 		t := Auth{}
-		if err := json.Unmarshal(s, &t); err != nil {
+		if err := socket.unmarshal(s, &t); err != nil {
 			socket.emitError(err)
 			return
 		}
@@ -1603,15 +1634,13 @@ func (socket *Socket) listener() {
 		}
 		m, p, err := socket.Connection.ReadMessage()
 		if err != nil {
-			socket.logError("caught an error when reading message", slog.Any("err", err))
-			if _, ok := err.(*websocket.CloseError); ok {
-				if err = socket.Open(); err != nil {
-					socket.Events.Error.Emit(err)
-				}
-				return
-			}
-			socket.close()
+			socket.logError("caught an error when reading message, attempting reconnect in 3s", slog.Any("err", err))
 			socket.Events.Error.Emit(err)
+			time.Sleep(3 * time.Second)
+			socket.logInfo("reconnecting")
+			if err = socket.Open(); err != nil {
+				socket.Events.Error.Emit(err)
+			}
 			return
 		}
 		if m != websocket.TextMessage {

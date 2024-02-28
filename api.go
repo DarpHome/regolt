@@ -557,12 +557,14 @@ type AutumnAPI struct {
 	Token      *Token
 	HTTPClient HTTPClient
 	URL        *url.URL
+	Arshaler   JSONArshaler
 }
 
 // Requester config
 type AutumnAPIConfig struct {
 	HTTPClient HTTPClient
 	URL        *url.URL
+	Arshaler   JSONArshaler
 }
 
 // NewAutumnAPI returns an AutumnAPI which can be used to upload and get files
@@ -585,6 +587,7 @@ func NewAutumnAPI(token *Token, config *AutumnAPIConfig) (api *AutumnAPI, err er
 		Token:      token,
 		HTTPClient: httpClient,
 		URL:        apiUrl,
+		Arshaler:   config.Arshaler,
 	}
 	return
 }
@@ -600,6 +603,31 @@ var (
 		return Route{"GET", "/" + url.PathEscape(tag) + "/" + url.PathEscape(id)}
 	}
 )
+
+type internalArshaler interface {
+	marshal(any) ([]byte, error)
+	unmarshal([]byte, any) error
+}
+
+func (api *AutumnAPI) marshal(v any) ([]byte, error) {
+	if api.Arshaler != nil {
+		b, err := api.Arshaler.Marshal(v)
+		if _, ok := err.(*ArshalNotImplemented); !ok {
+			return b, err
+		}
+	}
+	return json.Marshal(v)
+}
+
+func (api *AutumnAPI) unmarshal(d []byte, v any) error {
+	if api.Arshaler == nil {
+		err := api.Arshaler.Unmarshal(d, v)
+		if _, ok := err.(*ArshalNotImplemented); !ok {
+			return err
+		}
+	}
+	return json.Unmarshal(d, v)
+}
 
 func (api *AutumnAPI) Request(route Route, options *RequestOptions) (*http.Response, error) {
 	if options == nil {
@@ -648,7 +676,7 @@ func (api *AutumnAPI) Request(route Route, options *RequestOptions) (*http.Respo
 	if err != nil {
 		return nil, err
 	}
-	if err = handleResponse(response); err != nil {
+	if err = handleResponse(api, response); err != nil {
 		return nil, err
 	}
 	return response, nil
@@ -751,11 +779,13 @@ type API struct {
 	Token      *Token
 	HTTPClient HTTPClient
 	URL        *url.URL
+	Arshaler   JSONArshaler
 }
 
 type APIConfig struct {
 	HTTPClient HTTPClient
 	URL        *url.URL
+	Arshaler   JSONArshaler
 }
 
 func NewAPI(token *Token, config *APIConfig) (api *API, err error) {
@@ -777,8 +807,30 @@ func NewAPI(token *Token, config *APIConfig) (api *API, err error) {
 		Token:      token,
 		HTTPClient: httpClient,
 		URL:        apiUrl,
+		Arshaler:   config.Arshaler,
 	}
 	return
+}
+
+func (api *API) marshal(v any) ([]byte, error) {
+	if api.Arshaler != nil {
+		b, err := api.Arshaler.Marshal(v)
+		if _, ok := err.(*ArshalNotImplemented); !ok {
+			return b, err
+		}
+	}
+	return json.Marshal(v)
+}
+
+func (api *API) unmarshal(d []byte, v any) error {
+	fmt.Println(string(d))
+	if api.Arshaler != nil {
+		err := api.Arshaler.Unmarshal(d, v)
+		if _, ok := err.(*ArshalNotImplemented); !ok {
+			return err
+		}
+	}
+	return json.Unmarshal(d, v)
 }
 
 type APIError struct {
@@ -832,7 +884,7 @@ type RequestOptions struct {
 	QueryValues     url.Values
 }
 
-func handleResponse(response *http.Response) error {
+func handleResponse(arshaler internalArshaler, response *http.Response) error {
 	if response.StatusCode >= 400 {
 		defer response.Body.Close()
 		e := APIError{Response: response}
@@ -848,7 +900,11 @@ func handleResponse(response *http.Response) error {
 			Location   string         `json:"location"`
 			With       string         `json:"with"`
 		}{}
-		if err := json.NewDecoder(response.Body).Decode(&t); err != nil && !errors.Is(err, io.EOF) {
+		d, err := io.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		if err := arshaler.unmarshal(d, &t); err != nil {
 			return err
 		}
 		switch v := t.Err.(type) {
@@ -903,7 +959,7 @@ func (api *API) Request(route Route, options *RequestOptions) (*http.Response, e
 		if len(header.Get("Content-Type")) == 0 {
 			header.Set("Content-Type", "application/json")
 		}
-		b, err := json.Marshal(options.JSON)
+		b, err := api.marshal(options.JSON)
 		if err != nil {
 			return nil, err
 		}
@@ -922,7 +978,7 @@ func (api *API) Request(route Route, options *RequestOptions) (*http.Response, e
 	if err != nil {
 		return nil, err
 	}
-	if err = handleResponse(response); err != nil {
+	if err = handleResponse(api, response); err != nil {
 		return nil, err
 	}
 	return response, nil
@@ -935,8 +991,11 @@ func (api *API) RequestJSON(v any, route Route, options *RequestOptions) error {
 	}
 	defer response.Body.Close()
 	if v != nil {
-		err = json.NewDecoder(response.Body).Decode(v)
-		if err != nil && !errors.Is(err, io.EOF) {
+		d, err := io.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		if err = api.unmarshal(d, v); err != nil {
 			return err
 		}
 	}
