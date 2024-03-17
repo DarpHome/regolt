@@ -43,17 +43,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	socket.OnAuthenticated(func(a regolt.Authenticated) {
+	socket.OnAuthenticated(func(a *regolt.Authenticated) {
 		fmt.Println("Authenticated.")
 	})
-	socket.OnMessageDelete(func(event regolt.MessageDelete) {
+	socket.OnMessageDelete(func(event *regolt.MessageDelete) {
 		message := socket.Cache.Messages.Get(event.Channel, event.MessageID)
 		// if `message` is nil, then message was sent before bot started
 		if message != nil {
 			fmt.Printf("Message was deleted: %s, sent by %s\n", message.Content, message.Author)
 		}
 	})
-	socket.OnMessageUpdate(func(event regolt.MessageUpdate) {
+	socket.OnMessageUpdate(func(event *regolt.MessageUpdate) {
 		message := socket.Cache.Messages.Get(event.Channel, event.MessageID)
 		if message != nil {
 			fmt.Printf("Message %s changed; content was %s\n", message.ID, message.Content)

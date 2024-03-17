@@ -43,10 +43,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	socket.OnAuthenticated(func(a regolt.Authenticated) {
+	socket.OnAuthenticated(func(a *regolt.Authenticated) {
 		fmt.Println("Authenticated.")
 	})
-	socket.OnMessage(func(m regolt.Message) {
+	socket.OnMessage(func(m *regolt.Message) {
 		if m.Content == "!ping" {
 			api.SendMessage(m.Channel, &regolt.SendMessage{
 				Content: "Pong!",

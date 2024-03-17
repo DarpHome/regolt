@@ -382,12 +382,11 @@ func (so StringOption) Parse(ctx *Context) (any, error) {
 	return string(r), nil
 }
 
-func (c *Commands) handle(m regolt.Message) {
+func (c *Commands) handle(m *regolt.Message) {
 	if c.Prefix == nil {
 		return
 	}
-	pm := &m
-	lctx := c.createLightContext(pm)
+	lctx := c.createLightContext(m)
 	if c.GlobalCheck != nil && !c.GlobalCheck(lctx) {
 		return
 	}
