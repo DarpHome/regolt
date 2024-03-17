@@ -2557,7 +2557,7 @@ type CreateEmoji struct {
 // Create an emoji by its Autumn upload ID.
 // https://developers.revolt.chat/api/#tag/Emojis/operation/emoji_create_create_emoji
 func (api *API) CreateEmoji(emoji string, params *CreateEmoji) (ce *CustomEmoji, err error) {
-	err = api.RequestJSON(&ce, RouteCreateEmoji(emoji), nil)
+	err = api.RequestJSON(&ce, RouteCreateEmoji(emoji), &RequestOptions{JSON: params})
 	return
 }
 
